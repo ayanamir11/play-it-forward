@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { BetSelection, useBetSlipStore } from "@/store/betSlipStore";
 
 interface MarketCardRowProps {
@@ -71,9 +72,14 @@ export default function MarketCardRow({
   mlAway = "+140",
   totalLine = "O 44.5",
 }: MarketCardRowProps) {
+  const router = useRouter();
   const { selections, addSelection } = useBetSlipStore();
 
   const cardKey = `${homeTeam}${awayTeam}`;
+
+  const slug = `${homeTeam}-vs-${awayTeam}`
+    .toLowerCase()
+    .replace(/\s+/g, "-");
 
   const isSelected = (betType: BetSelection["betType"]) =>
     selections.some((s) => s.id === `${cardKey}-${betType}`);
@@ -101,7 +107,11 @@ export default function MarketCardRow({
 
   return (
     <div
-      className="flex items-center justify-between w-full rounded-xl p-4 border"
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/event/${slug}`)}
+      onKeyDown={(e) => e.key === "Enter" && router.push(`/event/${slug}`)}
+      className="flex items-center justify-between w-full rounded-xl p-4 border cursor-pointer transition-[filter] hover:brightness-110"
       style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
     >
       {/* Left: event info */}
@@ -118,8 +128,11 @@ export default function MarketCardRow({
         </span>
       </div>
 
-      {/* Right: odds buttons */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {/* Right: odds buttons — stopPropagation prevents card navigation on click */}
+      <div
+        className="flex items-center gap-2 flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
         <OddsButton
           label="Spread"
           value={spreadHome}
