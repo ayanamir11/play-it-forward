@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Bell,
   ChevronRight,
@@ -101,19 +102,30 @@ export default function AccountPage() {
 
             {/* Action buttons */}
             <div className="flex gap-3">
-              <button
-                className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              <Link
+                href="/wallet/deposit"
+                className="flex-1 text-center rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "#0052FF" }}
               >
                 Deposit
-              </button>
-              <button
-                className="flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
+              </Link>
+              <Link
+                href="/wallet/withdraw"
+                className="flex-1 text-center rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
                 style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
               >
                 Withdraw
-              </button>
+              </Link>
             </div>
+
+            {/* Wallet link */}
+            <Link
+              href="/wallet"
+              className="text-center text-xs font-medium"
+              style={{ color: "#0052FF" }}
+            >
+              View All Transactions →
+            </Link>
           </Card>
         </div>
 
