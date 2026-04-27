@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { BetCardSkeleton } from "@/components/ui/Skeletons";
 
 type BetStatus = "PENDING" | "WON" | "LOST" | "VOID";
 
@@ -188,6 +189,11 @@ type TabKey = (typeof TABS)[number]["key"];
 
 export default function MyBetsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("open");
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
   const bets = BETS[activeTab];
 
   return (
@@ -228,13 +234,16 @@ export default function MyBetsPage() {
 
         {/* Bet cards */}
         <div className="flex flex-col gap-3 pb-6">
-          {bets.length === 0 ? (
-            <p className="text-center py-12 text-sm" style={{ color: "#8895B3" }}>
-              No bets here yet.
-            </p>
-          ) : (
-            bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
-          )}
+          {isLoading
+            ? [0, 1, 2].map((i) => <BetCardSkeleton key={i} />)
+            : bets.length === 0
+              ? (
+                <p className="text-center py-12 text-sm" style={{ color: "#8895B3" }}>
+                  No bets here yet.
+                </p>
+              )
+              : bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
+          }
         </div>
 
       </div>

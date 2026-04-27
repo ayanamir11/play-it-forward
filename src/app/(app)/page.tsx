@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import CharityPotWidget from "@/components/home/CharityPotWidget";
 import MarketCardRow from "@/components/home/MarketCardRow";
+import { CharityWidgetSkeleton, MarketCardSkeleton } from "@/components/ui/Skeletons";
 
 const FEATURED_GAMES = [
   {
@@ -52,6 +54,12 @@ const FEATURED_GAMES = [
 ];
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="min-h-screen px-6 py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6">
@@ -70,7 +78,7 @@ export default function Home() {
         </div>
 
         {/* Charity widget */}
-        <CharityPotWidget />
+        {isLoading ? <CharityWidgetSkeleton /> : <CharityPotWidget />}
 
         {/* Featured Games */}
         <section className="flex flex-col gap-3">
@@ -84,34 +92,39 @@ export default function Home() {
               See All
             </a>
           </div>
-          {FEATURED_GAMES.map((game) => (
-            <MarketCardRow key={`${game.homeTeam}-${game.awayTeam}`} {...game} />
-          ))}
+          {isLoading
+            ? [0, 1, 2, 3].map((i) => <MarketCardSkeleton key={i} />)
+            : FEATURED_GAMES.map((game) => (
+                <MarketCardRow key={`${game.homeTeam}-${game.awayTeam}`} {...game} />
+              ))
+          }
         </section>
 
         {/* Live Now */}
-        <section className="flex flex-col gap-3 pb-6">
-          <h2 className="text-lg font-bold text-white">Live Now 🔴</h2>
-          <div className="relative">
-            <MarketCardRow
-              homeTeam="Denver Nuggets"
-              awayTeam="Milwaukee Bucks"
-              league="NBA"
-              gameTime="Q3 8:42 · 67 – 71"
-              spreadHome="-1.5"
-              spreadAway="-110"
-              mlHome="-125"
-              mlAway="+105"
-              totalLine="O 224.5"
-            />
-            <span
-              className="absolute top-3 right-3 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: "#FF3B5C", color: "#ffffff" }}
-            >
-              LIVE
-            </span>
-          </div>
-        </section>
+        {!isLoading && (
+          <section className="flex flex-col gap-3 pb-6">
+            <h2 className="text-lg font-bold text-white">Live Now 🔴</h2>
+            <div className="relative">
+              <MarketCardRow
+                homeTeam="Denver Nuggets"
+                awayTeam="Milwaukee Bucks"
+                league="NBA"
+                gameTime="Q3 8:42 · 67 – 71"
+                spreadHome="-1.5"
+                spreadAway="-110"
+                mlHome="-125"
+                mlAway="+105"
+                totalLine="O 224.5"
+              />
+              <span
+                className="absolute top-3 right-3 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: "#FF3B5C", color: "#ffffff" }}
+              >
+                LIVE
+              </span>
+            </div>
+          </section>
+        )}
 
       </div>
     </div>

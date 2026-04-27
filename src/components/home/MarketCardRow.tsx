@@ -32,7 +32,7 @@ function OddsButton({ label, value, sub, selected, onClick }: OddsButtonProps) {
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex flex-col items-center rounded-lg px-3 py-2 min-w-[72px] border transition-colors"
+      className="flex flex-col items-center rounded-lg px-2 py-2 flex-1 sm:flex-none sm:min-w-[72px] sm:px-3 border transition-colors"
       style={{
         backgroundColor: selected ? "#0052FF" : hovered ? "#242d45" : "#1C2438",
         borderColor: selected ? "#0052FF" : hovered ? "#0052FF" : "transparent",
@@ -111,17 +111,17 @@ export default function MarketCardRow({
       tabIndex={0}
       onClick={() => router.push(`/event/${slug}`)}
       onKeyDown={(e) => e.key === "Enter" && router.push(`/event/${slug}`)}
-      className="flex items-center justify-between w-full rounded-xl p-4 border cursor-pointer transition-[filter] hover:brightness-110"
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full rounded-xl p-4 border cursor-pointer transition-[filter] hover:brightness-110 gap-3"
       style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
     >
       {/* Left: event info */}
-      <div className="flex flex-col gap-1 min-w-0 mr-4">
+      <div className="flex flex-col gap-1 min-w-0">
         <span className="text-xs font-medium" style={{ color: "#8895B3" }}>
           {league}
         </span>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-white leading-snug">{homeTeam}</span>
-          <span className="text-sm font-bold text-white leading-snug">{awayTeam}</span>
+          <span className="text-sm font-bold text-white leading-snug truncate">{homeTeam}</span>
+          <span className="text-sm font-bold text-white leading-snug truncate">{awayTeam}</span>
         </div>
         <span className="text-xs" style={{ color: "#8895B3" }}>
           {gameTime}
@@ -130,7 +130,7 @@ export default function MarketCardRow({
 
       {/* Right: odds buttons — stopPropagation prevents card navigation on click */}
       <div
-        className="flex items-center gap-2 flex-shrink-0"
+        className="flex items-center gap-2 sm:flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <OddsButton

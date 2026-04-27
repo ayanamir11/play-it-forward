@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, Trophy, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Trophy, X } from "lucide-react";
+import { TransactionRowSkeleton } from "@/components/ui/Skeletons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,13 +64,28 @@ const FILTER_FN: Record<FilterTab, (t: Transaction) => boolean> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WalletPage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   const visible = TRANSACTIONS.filter(FILTER_FN[activeFilter]);
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
+
+        <button
+          onClick={() => router.push("/account")}
+          className="flex items-center gap-1.5 w-fit text-sm font-medium transition-colors hover:text-white group"
+          style={{ color: "#8895B3" }}
+        >
+          <ArrowLeft size={16} />
+          Back to Account
+        </button>
 
         <h1 className="text-[28px] font-bold text-white leading-tight">Wallet</h1>
 
@@ -121,7 +138,7 @@ export default function WalletPage() {
         </div>
 
         {/* ── 2. Quick stats ── */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {QUICK_STATS.map(({ label, value }) => (
             <div
               key={label}
@@ -168,7 +185,9 @@ export default function WalletPage() {
             className="rounded-xl border overflow-hidden"
             style={{ borderColor: "#2A3350" }}
           >
-            {visible.length === 0 ? (
+            {isLoading ? (
+              [0, 1, 2, 3].map((i) => <TransactionRowSkeleton key={i} />)
+            ) : visible.length === 0 ? (
               <p className="text-center py-10 text-sm" style={{ color: "#8895B3" }}>
                 No transactions found.
               </p>

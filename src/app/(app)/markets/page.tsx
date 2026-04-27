@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import MarketCardRow from "@/components/home/MarketCardRow";
+import { MarketCardSkeleton } from "@/components/ui/Skeletons";
 
 const TABS = ["All", "NFL", "NBA", "MLB", "NHL", "EPL", "MLS", "NCAAB"] as const;
 type Tab = (typeof TABS)[number];
@@ -130,6 +131,11 @@ function LeagueHeader({ league }: { league: string }) {
 
 export default function MarketsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("All");
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   const filteredGames =
     activeTab === "All"
@@ -144,7 +150,7 @@ export default function MarketsPage() {
   }, {});
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
         {/* Title */}
@@ -199,24 +205,27 @@ export default function MarketsPage() {
 
         {/* Game list */}
         <div className="flex flex-col gap-3 pb-6">
-          {activeTab === "All"
-            ? Object.entries(grouped).map(([league, games]) => (
-                <div key={league} className="flex flex-col gap-3">
-                  <LeagueHeader league={league} />
-                  {games.map((game) => (
-                    <MarketCardRow
-                      key={`${game.homeTeam}-${game.awayTeam}`}
-                      {...game}
-                    />
-                  ))}
-                </div>
-              ))
-            : filteredGames.map((game) => (
-                <MarketCardRow
-                  key={`${game.homeTeam}-${game.awayTeam}`}
-                  {...game}
-                />
-              ))}
+          {isLoading
+            ? [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
+            : activeTab === "All"
+              ? Object.entries(grouped).map(([league, games]) => (
+                  <div key={league} className="flex flex-col gap-3">
+                    <LeagueHeader league={league} />
+                    {games.map((game) => (
+                      <MarketCardRow
+                        key={`${game.homeTeam}-${game.awayTeam}`}
+                        {...game}
+                      />
+                    ))}
+                  </div>
+                ))
+              : filteredGames.map((game) => (
+                  <MarketCardRow
+                    key={`${game.homeTeam}-${game.awayTeam}`}
+                    {...game}
+                  />
+                ))
+          }
         </div>
 
       </div>

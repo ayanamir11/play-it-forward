@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, Check, CreditCard, Loader2, Smartphone } from "lucide-react";
+import { ArrowLeft, Building2, Check, CreditCard, Loader2, Smartphone } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -232,7 +232,7 @@ function Step2({
       </div>
 
       {/* Quick amounts */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {QUICK_AMOUNTS.map((amt) => {
           const active = amount === String(amt);
           return (
@@ -405,6 +405,7 @@ function Step3({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DepositPage() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -413,8 +414,17 @@ export default function DepositPage() {
   function back() { setStep((s) => Math.max(s - 1, 1) as Step); }
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[480px] flex flex-col">
+
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 w-fit text-sm font-medium transition-colors hover:text-white mb-6"
+          style={{ color: "#8895B3" }}
+        >
+          <ArrowLeft size={16} />
+          Back
+        </button>
 
         <h1 className="text-[28px] font-bold text-white leading-tight mb-8">Deposit</h1>
 

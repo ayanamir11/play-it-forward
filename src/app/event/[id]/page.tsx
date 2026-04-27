@@ -288,7 +288,7 @@ export default function EventPage({ params }: { params: { id: string } }) {
 
   return (
     <AppShell>
-      <div className="min-h-screen px-6 py-6">
+      <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
         <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
 
           {/* ── Event header card ── */}
@@ -313,7 +313,7 @@ export default function EventPage({ params }: { params: { id: string } }) {
             </div>
 
             {/* Teams */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               {/* Home */}
               <div className="flex-1">
                 <p className="text-xl font-bold text-white leading-tight">{HOME_TEAM}</p>
@@ -321,7 +321,7 @@ export default function EventPage({ params }: { params: { id: string } }) {
               </div>
 
               {/* Center */}
-              <div className="flex-shrink-0 text-center">
+              <div className="flex-shrink-0 sm:text-center">
                 {IS_LIVE ? (
                   <div className="flex flex-col items-center gap-1">
                     <p className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "var(--font-mono)" }}>

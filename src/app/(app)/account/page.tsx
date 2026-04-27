@@ -43,7 +43,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 export default function AccountPage() {
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
 
         {/* ── 1. Profile card ── */}
@@ -101,7 +101,7 @@ export default function AccountPage() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href="/wallet/deposit"
                 className="flex-1 text-center rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"

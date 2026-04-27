@@ -55,7 +55,7 @@ function StarRating({ score }: { score: number }) {
 
 export default function CharityPage() {
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-8 pb-6">
 
         {/* Title */}
@@ -83,7 +83,7 @@ export default function CharityPage() {
           </div>
 
           <div
-            className="grid grid-cols-3 gap-3 pt-4 border-t"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t"
             style={{ borderColor: "#2A3350" }}
           >
             {MINI_STATS.map(({ label, value }) => (

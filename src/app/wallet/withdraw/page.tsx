@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Building2, Check, CheckCircle2, Info, Loader2, Lock, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, ArrowLeft, Building2, Check, CheckCircle2, Info, Loader2, Lock, Mail } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -461,6 +462,7 @@ function Step3({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WithdrawPage() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -471,6 +473,15 @@ export default function WithdrawPage() {
   return (
     <div className="min-h-screen px-6 py-6">
       <div className="mx-auto max-w-[480px] flex flex-col">
+
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 w-fit text-sm font-medium transition-colors hover:text-white mb-6"
+          style={{ color: "#8895B3" }}
+        >
+          <ArrowLeft size={16} />
+          Back
+        </button>
 
         <h1 className="text-[28px] font-bold text-white leading-tight mb-8">Withdraw</h1>
 
