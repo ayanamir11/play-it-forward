@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BetSelection, useBetSlipStore } from "@/store/betSlipStore";
 
 interface MarketCardRowProps {
   homeTeam?: string;
@@ -70,10 +71,33 @@ export default function MarketCardRow({
   mlAway = "+140",
   totalLine = "O 44.5",
 }: MarketCardRowProps) {
-  const [selected, setSelected] = useState<"spread" | "ml" | "total" | null>(null);
+  const { selections, addSelection } = useBetSlipStore();
 
-  const toggle = (key: "spread" | "ml" | "total") =>
-    setSelected((prev) => (prev === key ? null : key));
+  const cardKey = `${homeTeam}${awayTeam}`;
+
+  const isSelected = (betType: BetSelection["betType"]) =>
+    selections.some((s) => s.id === `${cardKey}-${betType}`);
+
+  function handleSelect(betType: BetSelection["betType"], label: string, oddsStr: string) {
+    const id = `${cardKey}-${betType}`;
+    // If already selected, deselect by removing from store
+    if (isSelected(betType)) {
+      useBetSlipStore.getState().removeSelection(id);
+      return;
+    }
+    const odds = parseInt(oddsStr.replace("+", ""), 10);
+    const bet: BetSelection = {
+      id,
+      homeTeam,
+      awayTeam,
+      league,
+      gameTime,
+      betType,
+      label,
+      odds,
+    };
+    addSelection(bet);
+  }
 
   return (
     <div
@@ -100,22 +124,22 @@ export default function MarketCardRow({
           label="Spread"
           value={spreadHome}
           sub={spreadAway}
-          selected={selected === "spread"}
-          onClick={() => toggle("spread")}
+          selected={isSelected("spread")}
+          onClick={() => handleSelect("spread", `${homeTeam.split(" ").pop()} ${spreadHome}`, spreadAway)}
         />
         <OddsButton
           label="Moneyline"
           value={mlHome}
           sub={mlAway}
-          selected={selected === "ml"}
-          onClick={() => toggle("ml")}
+          selected={isSelected("moneyline")}
+          onClick={() => handleSelect("moneyline", `${homeTeam.split(" ").pop()} ML`, mlHome)}
         />
         <OddsButton
           label="Total"
           value={totalLine}
           sub="-110"
-          selected={selected === "total"}
-          onClick={() => toggle("total")}
+          selected={isSelected("total")}
+          onClick={() => handleSelect("total", totalLine, "-110")}
         />
       </div>
     </div>

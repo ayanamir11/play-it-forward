@@ -2,6 +2,7 @@
 
 import BottomTabBar from "./BottomTabBar";
 import Sidebar from "./Sidebar";
+import BetSlip from "@/components/betting/BetSlip";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <BottomTabBar />
+      <BetSlip />
     </div>
   );
 }
