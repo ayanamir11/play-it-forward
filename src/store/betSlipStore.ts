@@ -64,8 +64,9 @@ export const useBetSlipStore = create<BetSlipState>((set, get) => ({
   },
 
   charityContribution: () => {
-    const { selections } = get();
-    if (!selections.length) return 0;
-    return get().potentialPayout() * 0.02;
+    const { wagerAmount } = get();
+    const wager = parseFloat(wagerAmount);
+    if (!wager || wager <= 0) return 0;
+    return Math.round(wager * 0.02 * 100) / 100;
   },
 }));

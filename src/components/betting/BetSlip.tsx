@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ReceiptText, X } from "lucide-react";
+import { CheckCircle2, Loader2, ReceiptText, X } from "lucide-react";
 import { useBetSlipStore } from "@/store/betSlipStore";
+import { useAuthStore } from "@/store/authStore";
+import { api } from "@/lib/api";
 
 const QUICK_PICKS = [10, 25, 50, 100];
 
@@ -24,16 +26,40 @@ interface ModalProps {
 function ConfirmModal({ onCancel, onDone }: ModalProps) {
   const { selections, wagerAmount, potentialPayout, charityContribution, clearSlip } =
     useBetSlipStore();
+  const fetchUser = useAuthStore((s) => s.fetchUser);
   const [confirmed, setConfirmed] = useState(false);
-  const [betId] = useState(() => `PIF-${Math.floor(100000 + Math.random() * 900000)}`);
+  const [isPlacing, setIsPlacing] = useState(false);
+  const [betError, setBetError] = useState<string | null>(null);
+  const [betId, setBetId] = useState("");
 
   const bet = selections[0];
   const wager = parseFloat(wagerAmount) || 0;
   const payout = potentialPayout();
   const charity = charityContribution();
 
-  function handleConfirm() {
-    setConfirmed(true);
+  async function handleConfirm() {
+    if (!bet || isPlacing) return;
+    setIsPlacing(true);
+    setBetError(null);
+    try {
+      const res = await api.post("/api/bets", {
+        sport: bet.league,
+        event: `${bet.homeTeam} vs ${bet.awayTeam}`,
+        pick: bet.label,
+        betType: bet.betType.toUpperCase(),
+        odds: bet.odds,
+        wagerAmount: wager,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to place bet");
+      setBetId(`PIF-${data.bet.id.slice(-6).toUpperCase()}`);
+      fetchUser();
+      setConfirmed(true);
+    } catch (err) {
+      setBetError(err instanceof Error ? err.message : "Failed to place bet");
+    } finally {
+      setIsPlacing(false);
+    }
   }
 
   function handleDone() {
@@ -127,20 +153,32 @@ function ConfirmModal({ onCancel, onDone }: ModalProps) {
               ))}
             </div>
 
+            {betError && (
+              <div
+                className="rounded-lg px-4 py-3 text-sm font-medium"
+                style={{ backgroundColor: "rgba(255,59,92,0.12)", color: "#FF3B5C" }}
+              >
+                {betError}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-1">
               <button
                 onClick={onCancel}
+                disabled={isPlacing}
                 className="flex-1 rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
-                style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
+                style={{ borderColor: "#2A3350", color: "#F7F9FC", opacity: isPlacing ? 0.5 : 1 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                className="flex-1 rounded-lg py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: "#0052FF" }}
+                disabled={isPlacing}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: "#0052FF", opacity: isPlacing ? 0.75 : 1 }}
               >
-                Confirm Bet
+                {isPlacing && <Loader2 size={14} className="animate-spin" />}
+                {isPlacing ? "Placing…" : "Confirm Bet"}
               </button>
             </div>
           </>
@@ -164,6 +202,7 @@ export default function BetSlip() {
     potentialPayout,
     charityContribution,
   } = useBetSlipStore();
+  const user = useAuthStore((s) => s.user);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -171,7 +210,9 @@ export default function BetSlip() {
   const wager = parseFloat(wagerAmount) || 0;
   const payout = potentialPayout();
   const charity = charityContribution();
-  const canPlace = !!bet && wager > 0;
+  const balance = user ? parseFloat(user.balance) : 0;
+  const overBalance = wager > 0 && wager > balance;
+  const canPlace = !!bet && wager > 0 && !overBalance;
 
   return (
     <>
@@ -265,9 +306,19 @@ export default function BetSlip() {
 
                 {/* Wager input */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium" style={{ color: "#8895B3" }}>
-                    Wager Amount
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium" style={{ color: "#8895B3" }}>
+                      Wager Amount
+                    </label>
+                    {user && (
+                      <span className="text-xs" style={{ color: "#8895B3" }}>
+                        Balance:{" "}
+                        <span className="font-semibold text-white" style={{ fontFamily: "var(--font-mono)" }}>
+                          ${formatMoney(balance)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                   <div
                     className="flex items-center rounded-lg border overflow-hidden"
                     style={{ backgroundColor: "#0A0E1A", borderColor: "#2A3350" }}
@@ -328,6 +379,16 @@ export default function BetSlip() {
                   </div>
                 </div>
 
+                {/* Insufficient balance warning */}
+                {overBalance && (
+                  <div
+                    className="rounded-lg px-3 py-2.5 text-xs font-medium"
+                    style={{ backgroundColor: "rgba(255,59,92,0.1)", color: "#FF3B5C" }}
+                  >
+                    Wager exceeds your balance of ${formatMoney(balance)}
+                  </div>
+                )}
+
                 {/* Place bet button */}
                 <button
                   disabled={!canPlace}
@@ -339,9 +400,11 @@ export default function BetSlip() {
                     opacity: canPlace ? 1 : 0.6,
                   }}
                 >
-                  {canPlace
-                    ? `Place Bet — $${formatMoney(wager)}`
-                    : "Enter a wager to continue"}
+                  {overBalance
+                    ? "Insufficient balance"
+                    : canPlace
+                      ? `Place Bet — $${formatMoney(wager)}`
+                      : "Enter a wager to continue"}
                 </button>
               </>
             )}

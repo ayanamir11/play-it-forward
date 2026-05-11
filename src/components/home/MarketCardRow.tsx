@@ -14,6 +14,8 @@ interface MarketCardRowProps {
   mlHome?: string;
   mlAway?: string;
   totalLine?: string;
+  eventId?: string;
+  sportKey?: string;
 }
 
 interface OddsButtonProps {
@@ -71,6 +73,8 @@ export default function MarketCardRow({
   mlHome = "-165",
   mlAway = "+140",
   totalLine = "O 44.5",
+  eventId,
+  sportKey,
 }: MarketCardRowProps) {
   const router = useRouter();
   const { selections, addSelection } = useBetSlipStore();
@@ -80,6 +84,10 @@ export default function MarketCardRow({
   const slug = `${homeTeam}-vs-${awayTeam}`
     .toLowerCase()
     .replace(/\s+/g, "-");
+
+  const destination = eventId
+    ? `/markets/${eventId}${sportKey ? `?sport=${sportKey}` : ""}`
+    : `/markets/${slug}`;
 
   const isSelected = (betType: BetSelection["betType"]) =>
     selections.some((s) => s.id === `${cardKey}-${betType}`);
@@ -109,8 +117,8 @@ export default function MarketCardRow({
     <div
       role="button"
       tabIndex={0}
-      onClick={() => router.push(`/event/${slug}`)}
-      onKeyDown={(e) => e.key === "Enter" && router.push(`/event/${slug}`)}
+      onClick={() => router.push(destination)}
+      onKeyDown={(e) => e.key === "Enter" && router.push(destination)}
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full rounded-xl p-4 border cursor-pointer transition-[filter] hover:brightness-110 gap-3"
       style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
     >

@@ -1,14 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Search } from "lucide-react";
 import MarketCardRow from "@/components/home/MarketCardRow";
 import { MarketCardSkeleton } from "@/components/ui/Skeletons";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 const TABS = ["All", "NFL", "NBA", "MLB", "NHL", "EPL", "MLS", "NCAAB"] as const;
 type Tab = (typeof TABS)[number];
 
+const SPORT_KEYS: Record<Tab, string | null> = {
+  All:   null,
+  NFL:   "americanfootball_nfl",
+  NBA:   "basketball_nba",
+  MLB:   "baseball_mlb",
+  NHL:   "icehockey_nhl",
+  EPL:   "soccer_epl",
+  MLS:   "soccer_usa_mls",
+  NCAAB: "basketball_ncaab",
+};
+
+const DEFAULT_SPORT: Tab = "NBA";
+
+interface OddsOutcome {
+  name: string;
+  price: number;
+  point?: number;
+}
+
+interface OddsEvent {
+  id: string;
+  sport_key: string;
+  sport_title: string;
+  commence_time: string;
+  home_team: string;
+  away_team: string;
+  bookmakers: Array<{
+    markets: Array<{ key: string; outcomes: OddsOutcome[] }>;
+  }>;
+}
+
 interface Game {
+  eventId: string;
+  sportKey: string;
   homeTeam: string;
   awayTeam: string;
   league: string;
@@ -20,108 +55,77 @@ interface Game {
   totalLine: string;
 }
 
-const ALL_GAMES: Game[] = [
-  // NFL
-  {
-    homeTeam: "Kansas City Chiefs",
-    awayTeam: "Philadelphia Eagles",
-    league: "NFL",
-    gameTime: "Tonight 8:20 PM ET",
-    spreadHome: "-3.5",
-    spreadAway: "-110",
-    mlHome: "-185",
-    mlAway: "+155",
-    totalLine: "O 47.5",
-  },
-  {
-    homeTeam: "Dallas Cowboys",
-    awayTeam: "New York Giants",
-    league: "NFL",
-    gameTime: "Sun 1:00 PM ET",
-    spreadHome: "-7.5",
-    spreadAway: "-110",
-    mlHome: "-310",
-    mlAway: "+250",
-    totalLine: "O 43.0",
-  },
-  {
-    homeTeam: "San Francisco 49ers",
-    awayTeam: "Seattle Seahawks",
-    league: "NFL",
-    gameTime: "Sun 4:25 PM ET",
-    spreadHome: "-6.0",
-    spreadAway: "-110",
-    mlHome: "-245",
-    mlAway: "+200",
-    totalLine: "O 46.5",
-  },
-  // NBA
-  {
-    homeTeam: "Los Angeles Lakers",
-    awayTeam: "Boston Celtics",
-    league: "NBA",
-    gameTime: "Tonight 7:30 PM ET",
-    spreadHome: "+2.5",
-    spreadAway: "-110",
-    mlHome: "+115",
-    mlAway: "-135",
-    totalLine: "O 228.5",
-  },
-  {
-    homeTeam: "Golden State Warriors",
-    awayTeam: "Miami Heat",
-    league: "NBA",
-    gameTime: "Tonight 10:00 PM ET",
-    spreadHome: "-4.5",
-    spreadAway: "-110",
-    mlHome: "-190",
-    mlAway: "+160",
-    totalLine: "O 215.0",
-  },
-  // MLB
-  {
-    homeTeam: "New York Yankees",
-    awayTeam: "Boston Red Sox",
-    league: "MLB",
-    gameTime: "Tomorrow 1:05 PM ET",
-    spreadHome: "-1.5",
-    spreadAway: "+145",
-    mlHome: "-165",
-    mlAway: "+140",
-    totalLine: "O 8.5",
-  },
-  {
-    homeTeam: "Los Angeles Dodgers",
-    awayTeam: "Chicago Cubs",
-    league: "MLB",
-    gameTime: "Tomorrow 4:10 PM ET",
-    spreadHome: "-1.5",
-    spreadAway: "+130",
-    mlHome: "-150",
-    mlAway: "+125",
-    totalLine: "O 9.0",
-  },
-  // EPL
-  {
-    homeTeam: "Manchester City",
-    awayTeam: "Arsenal",
-    league: "EPL",
-    gameTime: "Tomorrow 12:30 PM ET",
-    spreadHome: "-0.5",
-    spreadAway: "-115",
-    mlHome: "-130",
-    mlAway: "+340",
-    totalLine: "O 2.5",
-  },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatGameTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "America/New_York",
+  });
+
+  if (day.getTime() === today.getTime()) return `Today ${time} ET`;
+  if (day.getTime() === tomorrow.getTime()) return `Tomorrow ${time} ET`;
+
+  const dayStr = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
+  return `${dayStr} ${time} ET`;
+}
+
+function fmtOdds(price?: number): string {
+  if (price === undefined) return "—";
+  return price > 0 ? `+${price}` : `${price}`;
+}
+
+function fmtPoint(point?: number): string {
+  if (point === undefined) return "—";
+  return point > 0 ? `+${point}` : `${point}`;
+}
+
+function eventToGame(ev: OddsEvent): Game {
+  const bm = ev.bookmakers[0];
+  const h2h     = bm?.markets.find((m) => m.key === "h2h");
+  const spreads  = bm?.markets.find((m) => m.key === "spreads");
+  const totals   = bm?.markets.find((m) => m.key === "totals");
+
+  const homeH2h    = h2h?.outcomes.find((o) => o.name === ev.home_team);
+  const awayH2h    = h2h?.outcomes.find((o) => o.name === ev.away_team);
+  const homeSpread = spreads?.outcomes.find((o) => o.name === ev.home_team);
+  const overTotal  = totals?.outcomes.find((o) => o.name === "Over");
+
+  return {
+    eventId:    ev.id,
+    sportKey:   ev.sport_key,
+    homeTeam:   ev.home_team,
+    awayTeam:   ev.away_team,
+    league:     ev.sport_title,
+    gameTime:   formatGameTime(ev.commence_time),
+    spreadHome: fmtPoint(homeSpread?.point),
+    spreadAway: fmtOdds(homeSpread?.price),
+    mlHome:     fmtOdds(homeH2h?.price),
+    mlAway:     fmtOdds(awayH2h?.price),
+    totalLine:  overTotal?.point !== undefined ? `O ${overTotal.point}` : "—",
+  };
+}
+
+// ─── League header ────────────────────────────────────────────────────────────
 
 function LeagueHeader({ league }: { league: string }) {
   return (
     <div className="flex items-center gap-3 mt-2">
-      <span
-        className="text-xs font-semibold tracking-widest uppercase flex-shrink-0"
-        style={{ color: "#8895B3" }}
-      >
+      <span className="text-xs font-semibold tracking-widest uppercase flex-shrink-0" style={{ color: "#8895B3" }}>
         {league}
       </span>
       <div className="flex-1 h-px" style={{ backgroundColor: "#2A3350" }} />
@@ -129,23 +133,53 @@ function LeagueHeader({ league }: { league: string }) {
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function MarketsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("All");
+  const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_SPORT);
+  const [games, setGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1500);
-    return () => clearTimeout(t);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const fetchEvents = useCallback(async (sportKey: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/odds/events?sport=${sportKey}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load events");
+      setGames((data.events as OddsEvent[]).map(eventToGame));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load events");
+      setGames([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const filteredGames =
-    activeTab === "All"
-      ? ALL_GAMES
-      : ALL_GAMES.filter((g) => g.league === activeTab);
+  useEffect(() => {
+    const key = SPORT_KEYS[DEFAULT_SPORT]!;
+    fetchEvents(key);
+  }, [fetchEvents]);
 
-  const gameCount = filteredGames.length;
+  function handleTabChange(tab: Tab) {
+    setActiveTab(tab);
+    const key = SPORT_KEYS[tab];
+    if (key) fetchEvents(key);
+  }
 
-  const grouped = filteredGames.reduce<Record<string, Game[]>>((acc, game) => {
-    (acc[game.league] ??= []).push(game);
+  const filtered = search.trim()
+    ? games.filter(
+        (g) =>
+          g.homeTeam.toLowerCase().includes(search.toLowerCase()) ||
+          g.awayTeam.toLowerCase().includes(search.toLowerCase()) ||
+          g.league.toLowerCase().includes(search.toLowerCase())
+      )
+    : games;
+
+  const grouped = filtered.reduce<Record<string, Game[]>>((acc, g) => {
+    (acc[g.league] ??= []).push(g);
     return acc;
   }, {});
 
@@ -153,12 +187,9 @@ export default function MarketsPage() {
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
-        {/* Title */}
-        <h1 className="text-[28px] font-bold text-white leading-tight">
-          Markets
-        </h1>
+        <h1 className="text-[28px] font-bold text-white leading-tight">Markets</h1>
 
-        {/* Search bar */}
+        {/* Search */}
         <div
           className="flex items-center gap-3 w-full rounded-xl px-4 py-3 border"
           style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
@@ -167,19 +198,21 @@ export default function MarketsPage() {
           <input
             type="text"
             placeholder="Search teams, leagues..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none"
             style={{ color: "#F7F9FC" }}
           />
         </div>
 
-        {/* Sport filter tabs */}
+        {/* Sport tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {TABS.map((tab) => {
             const active = activeTab === tab;
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className="flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium border transition-colors"
                 style={{
                   backgroundColor: active ? "#0052FF" : "#131929",
@@ -193,39 +226,53 @@ export default function MarketsPage() {
           })}
         </div>
 
-        {/* Section heading */}
+        {/* Heading */}
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">
             {activeTab === "All" ? "All Games" : `${activeTab} Games`}
           </h2>
-          <span className="text-sm" style={{ color: "#8895B3" }}>
-            {gameCount} {gameCount === 1 ? "game" : "games"}
-          </span>
+          {!isLoading && (
+            <span className="text-sm" style={{ color: "#8895B3" }}>
+              {filtered.length} {filtered.length === 1 ? "game" : "games"}
+            </span>
+          )}
         </div>
 
         {/* Game list */}
         <div className="flex flex-col gap-3 pb-6">
-          {isLoading
-            ? [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
-            : activeTab === "All"
-              ? Object.entries(grouped).map(([league, games]) => (
-                  <div key={league} className="flex flex-col gap-3">
-                    <LeagueHeader league={league} />
-                    {games.map((game) => (
-                      <MarketCardRow
-                        key={`${game.homeTeam}-${game.awayTeam}`}
-                        {...game}
-                      />
-                    ))}
-                  </div>
-                ))
-              : filteredGames.map((game) => (
-                  <MarketCardRow
-                    key={`${game.homeTeam}-${game.awayTeam}`}
-                    {...game}
-                  />
-                ))
-          }
+          {isLoading ? (
+            [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
+          ) : error ? (
+            <div
+              className="rounded-xl px-5 py-6 text-center border"
+              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
+            >
+              <p className="text-sm font-medium mb-1" style={{ color: "#FF3B5C" }}>
+                Failed to load events
+              </p>
+              <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div
+              className="rounded-xl px-5 py-10 text-center border"
+              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
+            >
+              <p className="text-sm font-medium text-white mb-1">No events available</p>
+              <p className="text-xs" style={{ color: "#8895B3" }}>
+                Check back later or try a different sport.
+              </p>
+            </div>
+          ) : Object.entries(grouped).map(([league, leagueGames]) => (
+            <div key={league} className="flex flex-col gap-3">
+              {Object.keys(grouped).length > 1 && <LeagueHeader league={league} />}
+              {leagueGames.map((game) => (
+                <MarketCardRow
+                  key={game.eventId}
+                  {...game}
+                />
+              ))}
+            </div>
+          ))}
         </div>
 
       </div>

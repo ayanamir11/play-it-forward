@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart2, Heart, Home, Receipt, User } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/", icon: Home },
@@ -14,6 +15,8 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const balance = user ? parseFloat(user.balance) : 0;
 
   return (
     <aside
@@ -66,7 +69,9 @@ export default function Sidebar() {
         <p className="text-xs font-medium" style={{ color: "#8895B3" }}>
           Balance
         </p>
-        <p className="text-base font-bold text-white mt-0.5">$250.00</p>
+        <p className="text-base font-bold text-white mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
+          ${balance.toFixed(2)}
+        </p>
       </div>
     </aside>
   );

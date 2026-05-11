@@ -3,18 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Eye, EyeOff, Lock } from "lucide-react";
+import { Check, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3;
 
 const CAUSES = [
-  { key: "health",    emoji: "🏥", label: "Health & Medical Research",  charity: "American Red Cross"   },
-  { key: "education", emoji: "📚", label: "Education",                   charity: "Khan Academy"         },
-  { key: "env",       emoji: "🌿", label: "Environment",                 charity: "WWF"                  },
-  { key: "rights",    emoji: "⚖️",  label: "Human Rights",               charity: "Amnesty International"},
-  { key: "poverty",   emoji: "🤝", label: "Poverty & Humanitarian Aid",  charity: "UNICEF"               },
+  { key: "health",    enum: "HEALTH",       emoji: "🏥", label: "Health & Medical Research",  charity: "American Red Cross"   },
+  { key: "education", enum: "EDUCATION",    emoji: "📚", label: "Education",                   charity: "Khan Academy"         },
+  { key: "env",       enum: "ENVIRONMENT",  emoji: "🌿", label: "Environment",                 charity: "WWF"                  },
+  { key: "rights",    enum: "HUMAN_RIGHTS", emoji: "⚖️",  label: "Human Rights",               charity: "Amnesty International"},
+  { key: "poverty",   enum: "POVERTY",      emoji: "🤝", label: "Poverty & Humanitarian Aid",  charity: "UNICEF"               },
 ] as const;
 
 type CauseKey = (typeof CAUSES)[number]["key"];
@@ -32,7 +33,10 @@ const STATES = [
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
-const STEP_LABELS = ["Account", "Identity", "Your Cause", "Confirm"];
+const STEP_LABELS = ["Account", "Identity", "Your Cause"];
+
+interface Step1Data { email: string; username: string; password: string }
+interface Step2Data { firstName: string; lastName: string; dateOfBirth: string }
 
 // ─── Reusable input styles ────────────────────────────────────────────────────
 
@@ -124,7 +128,6 @@ function StepIndicator({ current }: { current: Step }) {
 
         return (
           <div key={label} className="flex items-start">
-            {/* Circle + label */}
             <div className="flex flex-col items-center gap-1.5">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors"
@@ -143,8 +146,6 @@ function StepIndicator({ current }: { current: Step }) {
                 {label}
               </span>
             </div>
-
-            {/* Connector line */}
             {i < STEP_LABELS.length - 1 && (
               <div
                 className="h-0.5 w-10 mt-4 mx-1 flex-shrink-0 transition-colors"
@@ -197,13 +198,19 @@ function PasswordStrength({ password }: { password: string }) {
 
 // ─── Step 1 ───────────────────────────────────────────────────────────────────
 
-function Step1({ onNext }: { onNext: () => void }) {
-  const [email, setEmail] = useState("");
+function Step1({ onNext }: { onNext: (data: Step1Data) => void }) {
+  const [email, setEmail]       = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [phone, setPhone] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirm, setConfirm]   = useState("");
+  const [phone, setPhone]       = useState("");
+  const [showPwd, setShowPwd]           = useState(false);
+  const [showConfirm, setShowConfirm]   = useState(false);
+
+  function handleNext() {
+    if (!email || !username || !password || password !== confirm) return;
+    onNext({ email, username, password });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -219,6 +226,18 @@ function Step1({ onNext }: { onNext: () => void }) {
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className={inputCls()}
+            style={inputStyle()}
+          />
+        </Field>
+
+        <Field label="Username">
+          <input
+            type="text"
+            placeholder="yourhandle"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className={inputCls()}
             style={inputStyle()}
           />
@@ -278,9 +297,14 @@ function Step1({ onNext }: { onNext: () => void }) {
 
       <button
         type="button"
-        onClick={onNext}
-        className="w-full rounded-lg py-3 text-sm font-bold text-white"
-        style={{ backgroundColor: "#0052FF" }}
+        onClick={handleNext}
+        disabled={!email || !username || !password || password !== confirm}
+        className="w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity"
+        style={{
+          backgroundColor: "#0052FF",
+          opacity: (!email || !username || !password || password !== confirm) ? 0.5 : 1,
+          cursor: (!email || !username || !password || password !== confirm) ? "not-allowed" : "pointer",
+        }}
       >
         Continue →
       </button>
@@ -290,7 +314,7 @@ function Step1({ onNext }: { onNext: () => void }) {
 
 // ─── Step 2 ───────────────────────────────────────────────────────────────────
 
-function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+function Step2({ onBack, onNext }: { onBack: () => void; onNext: (data: Step2Data) => void }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName]   = useState("");
   const [month, setMonth]         = useState("");
@@ -307,6 +331,13 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
   const years = Array.from({ length: 82 }, (_, i) => String(currentYear - 18 - i));
   const days  = Array.from({ length: 31 }, (_, i) => String(i + 1));
 
+  function handleNext() {
+    if (!firstName || !lastName || !month || !day || !year) return;
+    const monthNum = MONTHS.indexOf(month) + 1;
+    const dateOfBirth = `${year}-${String(monthNum).padStart(2, "0")}-${String(parseInt(day)).padStart(2, "0")}`;
+    onNext({ firstName, lastName, dateOfBirth });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -315,7 +346,6 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* Name row */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="First Name">
             <input type="text" placeholder="Ayana" value={firstName}
@@ -329,7 +359,6 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
           </Field>
         </div>
 
-        {/* Date of birth */}
         <Field label="Date of Birth">
           <div className="grid grid-cols-3 gap-2">
             <SelectInput value={month} onChange={setMonth}>
@@ -353,7 +382,6 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
             className={inputCls()} style={inputStyle()} />
         </Field>
 
-        {/* City + State */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="City">
             <input type="text" placeholder="New York" value={city}
@@ -374,7 +402,6 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
             className={inputCls()} style={inputStyle()} />
         </Field>
 
-        {/* SSN last 4 */}
         <Field label="Last 4 digits of SSN">
           <div
             className="flex items-center rounded-lg border overflow-hidden transition-colors focus-within:border-[#0052FF]"
@@ -401,14 +428,28 @@ function Step2({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
         </Field>
       </div>
 
-      <NavButtons onBack={onBack} onNext={onNext} />
+      <NavButtons
+        onBack={onBack}
+        onNext={handleNext}
+        nextDisabled={!firstName || !lastName || !month || !day || !year}
+      />
     </div>
   );
 }
 
 // ─── Step 3 ───────────────────────────────────────────────────────────────────
 
-function Step3({ onBack, onNext }: { onBack: () => void; onNext: (cause: CauseKey) => void }) {
+function Step3({
+  onBack,
+  onNext,
+  isLoading,
+  error,
+}: {
+  onBack: () => void;
+  onNext: (cause: CauseKey) => void;
+  isLoading: boolean;
+  error: string | null;
+}) {
   const [selected, setSelected] = useState<CauseKey | null>(null);
 
   return (
@@ -419,6 +460,15 @@ function Step3({ onBack, onNext }: { onBack: () => void; onNext: (cause: CauseKe
           Your losing bets will fund this cause. You can change this monthly.
         </p>
       </div>
+
+      {error && (
+        <div
+          className="rounded-lg px-4 py-3 text-sm font-medium"
+          style={{ backgroundColor: "rgba(255,59,92,0.12)", color: "#FF3B5C" }}
+        >
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {CAUSES.map(({ key, emoji, label, charity }) => {
@@ -441,7 +491,6 @@ function Step3({ onBack, onNext }: { onBack: () => void; onNext: (cause: CauseKe
                   Featured this month: {charity}
                 </p>
               </div>
-              {/* Radio */}
               <div
                 className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                 style={{ borderColor: active ? "#0052FF" : "#2A3350" }}
@@ -455,93 +504,77 @@ function Step3({ onBack, onNext }: { onBack: () => void; onNext: (cause: CauseKe
         })}
       </div>
 
-      <NavButtons
-        onBack={onBack}
-        onNext={() => selected && onNext(selected)}
-        nextLabel="Create Account →"
-      />
-    </div>
-  );
-}
-
-// ─── Step 4 ───────────────────────────────────────────────────────────────────
-
-function Step4({ causeKey }: { causeKey: CauseKey | null }) {
-  const router = useRouter();
-  const cause = CAUSES.find((c) => c.key === causeKey) ?? CAUSES[0];
-
-  return (
-    <div className="flex flex-col items-center gap-6 text-center">
-      {/* Animated checkmark */}
-      <div className="relative">
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center animate-pulse"
-          style={{ backgroundColor: "rgba(0,196,140,0.15)" }}
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isLoading}
+          className="flex-1 rounded-lg py-3 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
+          style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
         >
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "#00C48C" }}
-          >
-            <Check size={28} color="#ffffff" strokeWidth={3} />
-          </div>
-        </div>
+          ← Back
+        </button>
+        <button
+          type="button"
+          onClick={() => selected && onNext(selected)}
+          disabled={!selected || isLoading}
+          className="flex-[2] flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-opacity"
+          style={{
+            backgroundColor: !selected || isLoading ? "#2A3350" : "#0052FF",
+            opacity: !selected || isLoading ? 0.6 : 1,
+            cursor: !selected || isLoading ? "not-allowed" : "pointer",
+          }}
+        >
+          {isLoading && <Loader2 size={16} className="animate-spin" />}
+          {isLoading ? "Creating account..." : "Create Account →"}
+        </button>
       </div>
-
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-1">You&apos;re all set! 🎉</h2>
-        <p className="text-sm" style={{ color: "#8895B3" }}>Welcome to Play It Forward</p>
-      </div>
-
-      {/* Summary card */}
-      <div
-        className="w-full rounded-xl p-5 border flex flex-col gap-3 text-left"
-        style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{cause.emoji}</span>
-          <div>
-            <p className="text-sm font-bold text-white">{cause.label}</p>
-            <p className="text-xs" style={{ color: "#8895B3" }}>
-              Featured charity: {cause.charity}
-            </p>
-          </div>
-        </div>
-        <div className="h-px" style={{ backgroundColor: "#2A3350" }} />
-        <p className="text-sm leading-relaxed" style={{ color: "#8895B3" }}>
-          Every losing bet you place will contribute to{" "}
-          <span className="text-white font-semibold">{cause.charity}</span>.
-          Your impact starts now.
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => router.push("/")}
-        className="w-full rounded-lg py-3 text-sm font-bold text-white"
-        style={{ backgroundColor: "#0052FF" }}
-      >
-        Start Betting →
-      </button>
-
-      <p className="text-xs leading-relaxed" style={{ color: "#8895B3" }}>
-        Your identity will be verified shortly.
-        You can deposit once approved.
-      </p>
     </div>
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
-  const [selectedCause, setSelectedCause] = useState<CauseKey | null>(null);
+  const register = useAuthStore((s) => s.register);
 
-  function next() { setStep((s) => Math.min(s + 1, 4) as Step); }
+  const [step, setStep] = useState<Step>(1);
+  const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
+  const [step2Data, setStep2Data] = useState<Step2Data | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function next() { setStep((s) => Math.min(s + 1, 3) as Step); }
   function back() {
     if (step === 1) { router.push("/login"); return; }
+    setError(null);
     setStep((s) => Math.max(s - 1, 1) as Step);
+  }
+
+  async function handleCauseNext(causeKey: CauseKey) {
+    if (!step1Data || !step2Data) return;
+    setError(null);
+    setIsLoading(true);
+
+    const causeEnum = CAUSES.find((c) => c.key === causeKey)!.enum;
+
+    try {
+      await register({
+        email:         step1Data.email,
+        username:      step1Data.username,
+        password:      step1Data.password,
+        firstName:     step2Data.firstName,
+        lastName:      step2Data.lastName,
+        dateOfBirth:   step2Data.dateOfBirth,
+        selectedCause: causeEnum,
+      });
+      router.replace("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -551,39 +584,43 @@ export default function RegisterPage() {
     >
       <div className="w-full max-w-[480px] flex flex-col">
 
-        {/* Brand */}
         <p className="text-center text-lg font-bold mb-8" style={{ color: "#0052FF" }}>
           ⚡ Play It Forward
         </p>
 
-        {/* Step indicator */}
         <StepIndicator current={step} />
 
-        {/* Step content */}
         <div
           className="rounded-2xl p-6 border"
           style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
         >
-          {step === 1 && <Step1 onNext={next} />}
-          {step === 2 && <Step2 onBack={back} onNext={next} />}
+          {step === 1 && (
+            <Step1
+              onNext={(data) => { setStep1Data(data); next(); }}
+            />
+          )}
+          {step === 2 && (
+            <Step2
+              onBack={back}
+              onNext={(data) => { setStep2Data(data); next(); }}
+            />
+          )}
           {step === 3 && (
             <Step3
               onBack={back}
-              onNext={(cause) => { setSelectedCause(cause); next(); }}
+              onNext={handleCauseNext}
+              isLoading={isLoading}
+              error={error}
             />
           )}
-          {step === 4 && <Step4 causeKey={selectedCause} />}
         </div>
 
-        {/* Sign in link (steps 1-3 only) */}
-        {step < 4 && (
-          <p className="text-center text-sm mt-6" style={{ color: "#8895B3" }}>
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold" style={{ color: "#0052FF" }}>
-              Sign in
-            </Link>
-          </p>
-        )}
+        <p className="text-center text-sm mt-6" style={{ color: "#8895B3" }}>
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold" style={{ color: "#0052FF" }}>
+            Sign in
+          </Link>
+        </p>
 
       </div>
     </div>

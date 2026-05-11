@@ -1,67 +1,114 @@
 "use client";
 
-import { BookOpen, HandHeart, Heart, Leaf, Scale, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpen, HandHeart, Heart, Leaf, Loader2, Scale } from "lucide-react";
+import { api } from "@/lib/api";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const MINI_STATS = [
-  { label: "Bets Contributed", value: "34" },
-  { label: "Current Streak",   value: "3 months" },
-  { label: "Charities Supported", value: "4" },
-];
+interface ActiveCharity {
+  name: string;
+  description: string;
+  causeCategory: string;
+}
+
+interface BreakdownItem {
+  category: string;
+  total: number;
+}
+
+interface HistoryItem {
+  month: string;
+  charityName: string;
+  charityCategory: string;
+  amount: number;
+  isDisbursed: boolean;
+}
+
+interface Summary {
+  totalDonated: number;
+  thisMonth: number;
+  betsWithCharity: number;
+  charitiesSupported: number;
+  selectedCause: string | null;
+  activeCharity: ActiveCharity | null;
+  breakdown: BreakdownItem[];
+  history: HistoryItem[];
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CAUSE_CATEGORIES = [
-  { key: "health",      label: "Health",       icon: Heart,     charity: "American Red Cross" },
-  { key: "education",   label: "Education",    icon: BookOpen,  charity: "Khan Academy" },
-  { key: "environment", label: "Environment",  icon: Leaf,      charity: "The Nature Conservancy" },
-  { key: "rights",      label: "Human Rights", icon: Scale,     charity: "Amnesty International" },
-  { key: "poverty",     label: "Poverty & Aid",icon: HandHeart, charity: "Feeding America" },
+  { key: "HEALTH",       label: "Health",       icon: Heart,     defaultCharity: "American Red Cross"      },
+  { key: "EDUCATION",    label: "Education",    icon: BookOpen,  defaultCharity: "Khan Academy"            },
+  { key: "ENVIRONMENT",  label: "Environment",  icon: Leaf,      defaultCharity: "The Nature Conservancy"  },
+  { key: "HUMAN_RIGHTS", label: "Human Rights", icon: Scale,     defaultCharity: "Amnesty International"   },
+  { key: "POVERTY",      label: "Poverty & Aid",icon: HandHeart, defaultCharity: "Feeding America"         },
 ];
 
-const HISTORY = [
-  { month: "April 2026",   charity: "American Red Cross",      amount: "$12.40", status: "Pending"   },
-  { month: "March 2026",   charity: "American Red Cross",      amount: "$31.20", status: "Disbursed" },
-  { month: "February 2026",charity: "American Red Cross",      amount: "$18.75", status: "Disbursed" },
-  { month: "January 2026", charity: "Khan Academy",            amount: "$24.60", status: "Disbursed" },
-];
+const CAUSE_LABELS: Record<string, string> = {
+  HEALTH:       "Health & Medical Research",
+  EDUCATION:    "Education",
+  ENVIRONMENT:  "Environment & Conservation",
+  HUMAN_RIGHTS: "Human Rights",
+  POVERTY:      "Poverty & Aid",
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatMonth(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-base font-bold text-white">{children}</h2>
-  );
-}
-
-function StarRating({ score }: { score: number }) {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          size={14}
-          fill={n <= Math.floor(score) ? "#00C48C" : "none"}
-          stroke="#00C48C"
-        />
-      ))}
-      <span className="text-xs ml-1" style={{ color: "#8895B3" }}>
-        {score}/5
-      </span>
-    </div>
-  );
+  return <h2 className="text-base font-bold text-white">{children}</h2>;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CharityPage() {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .get("/api/donations/summary")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.totalDonated !== undefined) setSummary(data as Summary);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin" style={{ color: "#0052FF" }} />
+      </div>
+    );
+  }
+
+  const totalDonated = summary?.totalDonated ?? 0;
+  const thisMonth = summary?.thisMonth ?? 0;
+  const betsWithCharity = summary?.betsWithCharity ?? 0;
+  const charitiesSupported = summary?.charitiesSupported ?? 0;
+  const selectedCause = summary?.selectedCause ?? null;
+  const activeCharity = summary?.activeCharity ?? null;
+  const breakdown = summary?.breakdown ?? [];
+  const history = summary?.history ?? [];
+
   return (
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-8 pb-6">
 
-        {/* Title */}
-        <h1 className="text-[28px] font-bold text-white leading-tight">
-          Charity Hub
-        </h1>
+        <h1 className="text-[28px] font-bold text-white leading-tight">Charity Hub</h1>
 
         {/* ── 1. Impact hero card ── */}
         <div
@@ -73,25 +120,29 @@ export default function CharityPage() {
           }}
         >
           <div>
-            <p className="text-sm mb-1" style={{ color: "#8895B3" }}>
-              Your Total Impact
+            <p className="text-sm mb-1" style={{ color: "#8895B3" }}>Your Total Impact</p>
+            <p className="text-5xl font-bold text-white leading-none" style={{ fontFamily: "var(--font-mono)" }}>
+              ${totalDonated.toFixed(2)}
             </p>
-            <p className="text-5xl font-bold text-white leading-none">$147.80</p>
             <p className="text-sm mt-1" style={{ color: "#8895B3" }}>
-              donated across 6 months
+              {history.length > 0
+                ? `across ${history.length} month${history.length !== 1 ? "s" : ""}`
+                : "Place bets to start contributing to your chosen cause"}
             </p>
           </div>
 
           <div
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t"
+            className="grid grid-cols-2 gap-3 pt-4 border-t"
             style={{ borderColor: "#2A3350" }}
           >
-            {MINI_STATS.map(({ label, value }) => (
-              <div key={label} className="flex flex-col gap-0.5">
-                <span className="text-xs" style={{ color: "#8895B3" }}>{label}</span>
-                <span className="text-sm font-bold text-white">{value}</span>
-              </div>
-            ))}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs" style={{ color: "#8895B3" }}>Bets Contributing</span>
+              <span className="text-sm font-bold text-white">{betsWithCharity}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs" style={{ color: "#8895B3" }}>Charities Supported</span>
+              <span className="text-sm font-bold text-white">{charitiesSupported}</span>
+            </div>
           </div>
         </div>
 
@@ -103,42 +154,46 @@ export default function CharityPage() {
             className="rounded-xl p-5 border flex flex-col gap-4"
             style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
           >
-            {/* Category label */}
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#8895B3" }}>
-              Health &amp; Medical Research
+              {selectedCause ? (CAUSE_LABELS[selectedCause] ?? selectedCause) : "No cause selected"}
             </span>
 
-            {/* Charity identity */}
-            <div className="flex items-start gap-4">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
-                style={{ backgroundColor: "#C8102E" }}
-              >
-                ✚
+            {activeCharity ? (
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
+                  style={{ backgroundColor: "#1C2438" }}
+                >
+                  ♥
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-bold text-white">{activeCharity.name}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "#8895B3" }}>
+                    {activeCharity.description}
+                  </p>
+                </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <p className="text-base font-bold text-white">American Red Cross</p>
-                <p className="text-xs leading-relaxed" style={{ color: "#8895B3" }}>
-                  Preventing and alleviating human suffering in the face of emergencies
-                </p>
-                <StarRating score={4.5} />
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm" style={{ color: "#8895B3" }}>
+                {selectedCause
+                  ? "No charity is active for your cause this month."
+                  : "Select a cause to get started."}
+              </p>
+            )}
 
-            {/* This month stat */}
             <div
               className="flex items-center justify-between rounded-lg px-4 py-2.5"
               style={{ backgroundColor: "rgba(0,196,140,0.08)" }}
             >
-              <span className="text-xs font-medium" style={{ color: "#00C48C" }}>
-                This Month
-              </span>
-              <span className="text-sm font-bold" style={{ color: "#00C48C", fontFamily: "var(--font-mono)" }}>
-                $12.40 donated
+              <span className="text-xs font-medium" style={{ color: "#00C48C" }}>This Month</span>
+              <span
+                className="text-sm font-bold"
+                style={{ color: "#00C48C", fontFamily: "var(--font-mono)" }}
+              >
+                ${thisMonth.toFixed(2)} donated
               </span>
             </div>
 
-            {/* Switch button */}
             <button
               className="w-full rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
               style={{ borderColor: "#2A3350", color: "#8895B3" }}
@@ -153,8 +208,9 @@ export default function CharityPage() {
           <SectionHeading>All Cause Categories</SectionHeading>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {CAUSE_CATEGORIES.map(({ key, label, icon: Icon, charity }) => {
-              const active = key === "health";
+            {CAUSE_CATEGORIES.map(({ key, label, icon: Icon, defaultCharity }) => {
+              const active = key === selectedCause;
+              const categoryTotal = breakdown.find((b) => b.category === key)?.total ?? 0;
               return (
                 <div
                   key={key}
@@ -173,7 +229,7 @@ export default function CharityPage() {
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-sm font-semibold text-white">{label}</span>
                     <span className="text-xs truncate" style={{ color: "#8895B3" }}>
-                      {charity}
+                      {categoryTotal > 0 ? `$${categoryTotal.toFixed(2)} donated` : defaultCharity}
                     </span>
                   </div>
                 </div>
@@ -186,55 +242,59 @@ export default function CharityPage() {
         <div className="flex flex-col gap-3">
           <SectionHeading>Donation History</SectionHeading>
 
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: "#2A3350" }}
-          >
-            {/* Table header */}
-            <div
-              className="grid grid-cols-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
-              style={{ backgroundColor: "#1C2438", color: "#8895B3" }}
-            >
-              <span>Month</span>
-              <span className="col-span-1">Charity</span>
-              <span className="text-right">Amount</span>
-              <span className="text-right">Status</span>
-            </div>
-
-            {/* Rows */}
-            {HISTORY.map(({ month, charity, amount, status }, i) => {
-              const disbursed = status === "Disbursed";
-              return (
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#2A3350" }}>
+            {history.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm" style={{ color: "#8895B3" }}>
+                  No donations yet. Place bets to start contributing.
+                </p>
+              </div>
+            ) : (
+              <>
                 <div
-                  key={month}
-                  className="grid grid-cols-4 items-center px-4 py-3 text-sm border-t"
-                  style={{
-                    borderColor: "#2A3350",
-                    backgroundColor: i % 2 === 0 ? "#131929" : "transparent",
-                  }}
+                  className="grid grid-cols-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+                  style={{ backgroundColor: "#1C2438", color: "#8895B3" }}
                 >
-                  <span className="text-white font-medium">{month}</span>
-                  <span className="truncate" style={{ color: "#8895B3" }}>{charity}</span>
-                  <span
-                    className="text-right font-bold"
-                    style={{ color: "#F7F9FC", fontFamily: "var(--font-mono)" }}
-                  >
-                    {amount}
-                  </span>
-                  <div className="flex justify-end">
-                    <span
-                      className="text-xs font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: disbursed ? "rgba(0,196,140,0.15)" : "rgba(136,149,179,0.15)",
-                        color: disbursed ? "#00C48C" : "#8895B3",
-                      }}
-                    >
-                      {status}
-                    </span>
-                  </div>
+                  <span>Month</span>
+                  <span>Charity</span>
+                  <span className="text-right">Amount</span>
+                  <span className="text-right">Status</span>
                 </div>
-              );
-            })}
+
+                {history.map(({ month, charityName, amount, isDisbursed }, i) => (
+                  <div
+                    key={`${month}-${charityName}`}
+                    className="grid grid-cols-4 items-center px-4 py-3 text-sm border-t"
+                    style={{
+                      borderColor: "#2A3350",
+                      backgroundColor: i % 2 === 0 ? "#131929" : "transparent",
+                    }}
+                  >
+                    <span className="text-white font-medium">{formatMonth(month)}</span>
+                    <span className="truncate" style={{ color: "#8895B3" }}>{charityName}</span>
+                    <span
+                      className="text-right font-bold"
+                      style={{ color: "#F7F9FC", fontFamily: "var(--font-mono)" }}
+                    >
+                      ${amount.toFixed(2)}
+                    </span>
+                    <div className="flex justify-end">
+                      <span
+                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: isDisbursed
+                            ? "rgba(0,196,140,0.15)"
+                            : "rgba(136,149,179,0.15)",
+                          color: isDisbursed ? "#00C48C" : "#8895B3",
+                        }}
+                      >
+                        {isDisbursed ? "Disbursed" : "Pending"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
 

@@ -1,115 +1,102 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BetCardSkeleton } from "@/components/ui/Skeletons";
+import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type BetStatus = "PENDING" | "WON" | "LOST" | "VOID";
 
-interface Bet {
+interface ApiBet {
   id: string;
-  league: string;
-  matchup: string;
+  sport: string;
+  event: string;
   pick: string;
-  odds: string;
-  wager: number;
-  payout?: number;
-  donated?: number;
+  betType: string;
+  odds: number;
+  wagerAmount: number;
+  potentialPayout: number;
+  charityContribution: number | null;
   status: BetStatus;
-  charity?: string;
+  createdAt: string;
 }
 
-const BETS: Record<"open" | "settled" | "void", Bet[]> = {
-  open: [
-    {
-      id: "1",
-      league: "NFL",
-      matchup: "Chiefs vs Eagles",
-      pick: "Chiefs -3.5",
-      odds: "-110",
-      wager: 22,
-      status: "PENDING",
-    },
-    {
-      id: "2",
-      league: "NBA",
-      matchup: "Lakers vs Celtics",
-      pick: "Over 228.5",
-      odds: "-110",
-      wager: 11,
-      status: "PENDING",
-    },
-  ],
-  settled: [
-    {
-      id: "3",
-      league: "NBA",
-      matchup: "Warriors vs Heat",
-      pick: "Warriors -4.5",
-      odds: "-110",
-      wager: 55,
-      payout: 100,
-      status: "WON",
-    },
-    {
-      id: "4",
-      league: "MLB",
-      matchup: "Yankees vs Red Sox",
-      pick: "Yankees ML",
-      odds: "-165",
-      wager: 33,
-      payout: 53,
-      status: "WON",
-    },
-    {
-      id: "5",
-      league: "NFL",
-      matchup: "Cowboys vs Giants",
-      pick: "Cowboys -7.5",
-      odds: "-110",
-      wager: 44,
-      donated: 0.44,
-      charity: "American Red Cross",
-      status: "LOST",
-    },
-  ],
-  void: [
-    {
-      id: "6",
-      league: "EPL",
-      matchup: "Man City vs Arsenal",
-      pick: "Man City ML",
-      odds: "-130",
-      wager: 26,
-      status: "VOID",
-    },
-  ],
-};
+type TabKey = "open" | "settled" | "void";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatOdds(n: number) {
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "America/New_York",
+  });
+}
+
+async function fetchTab(tab: TabKey): Promise<ApiBet[]> {
+  if (tab === "open") {
+    const res = await api.get("/api/bets?status=PENDING");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to load bets");
+    return data.bets;
+  }
+  if (tab === "void") {
+    const res = await api.get("/api/bets?status=VOID");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to load bets");
+    return data.bets;
+  }
+  // "settled" = WON + LOST fetched in parallel
+  const [wonRes, lostRes] = await Promise.all([
+    api.get("/api/bets?status=WON"),
+    api.get("/api/bets?status=LOST"),
+  ]);
+  const [wonData, lostData] = await Promise.all([wonRes.json(), lostRes.json()]);
+  if (!wonRes.ok) throw new Error(wonData.error ?? "Failed to load bets");
+  if (!lostRes.ok) throw new Error(lostData.error ?? "Failed to load bets");
+  const combined: ApiBet[] = [...wonData.bets, ...lostData.bets];
+  return combined.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<BetStatus, { bg: string; color: string; label: string }> = {
   PENDING: { bg: "rgba(136,149,179,0.15)", color: "#8895B3", label: "Pending" },
   WON:     { bg: "rgba(0,196,140,0.15)",   color: "#00C48C", label: "Won"     },
   LOST:    { bg: "rgba(255,59,92,0.15)",    color: "#FF3B5C", label: "Lost"    },
-  VOID:    { bg: "rgba(136,149,179,0.15)", color: "#8895B3", label: "Void"    },
+  VOID:    { bg: "rgba(136,149,179,0.15)",  color: "#8895B3", label: "Void"    },
 };
 
-function BetCard({ bet }: { bet: Bet }) {
+function BetCard({ bet }: { bet: ApiBet }) {
   const badge = STATUS_STYLES[bet.status];
+  const wager = Number(bet.wagerAmount);
+  const payout = Number(bet.potentialPayout);
+  const charity = bet.charityContribution ? Number(bet.charityContribution) : null;
 
   return (
     <div
       className="rounded-xl p-4 border flex flex-col gap-3"
       style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
     >
-      {/* Top row */}
+      {/* Top row: league · date | status badge */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1 min-w-0">
-          <span
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "#8895B3" }}
-          >
-            {bet.league}
-          </span>
-          <span className="text-sm font-bold text-white">{bet.matchup}</span>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#8895B3" }}>
+              {bet.sport}
+            </span>
+            <span className="text-xs" style={{ color: "#2A3350" }}>·</span>
+            <span className="text-xs" style={{ color: "#8895B3" }}>{formatDate(bet.createdAt)}</span>
+          </div>
+          <span className="text-sm font-bold text-white leading-snug">{bet.event}</span>
         </div>
         <span
           className="flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full"
@@ -119,59 +106,58 @@ function BetCard({ bet }: { bet: Bet }) {
         </span>
       </div>
 
-      {/* Middle row */}
+      {/* Middle row: pick | odds + wager */}
       <div
         className="flex items-center justify-between rounded-lg px-3 py-2.5"
         style={{ backgroundColor: "#1C2438" }}
       >
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 min-w-0 pr-4">
           <span className="text-xs" style={{ color: "#8895B3" }}>Your pick</span>
-          <span className="text-sm font-bold text-white">{bet.pick}</span>
+          <span className="text-sm font-bold text-white truncate">{bet.pick}</span>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col gap-0.5 items-center">
+        <div className="flex items-center gap-5 flex-shrink-0">
+          <div className="flex flex-col gap-0.5 items-end">
             <span className="text-xs" style={{ color: "#8895B3" }}>Odds</span>
-            <span
-              className="text-sm font-bold text-white"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {bet.odds}
+            <span className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-mono)" }}>
+              {formatOdds(bet.odds)}
             </span>
           </div>
-          <div className="flex flex-col gap-0.5 items-center">
+          <div className="flex flex-col gap-0.5 items-end">
             <span className="text-xs" style={{ color: "#8895B3" }}>Wager</span>
-            <span
-              className="text-sm font-bold text-white"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              ${bet.wager.toFixed(2)}
+            <span className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-mono)" }}>
+              ${wager.toFixed(2)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Bottom row — WON */}
-      {bet.status === "WON" && bet.payout !== undefined && (
+      {/* Payout row — PENDING shows potential; WON shows actual */}
+      {(bet.status === "PENDING" || bet.status === "WON") && (
         <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: "#8895B3" }}>Payout</span>
+          <span className="text-xs" style={{ color: "#8895B3" }}>
+            {bet.status === "WON" ? "Payout" : "To Win"}
+          </span>
           <span
             className="text-sm font-bold"
-            style={{ color: "#00C48C", fontFamily: "var(--font-mono)" }}
+            style={{
+              color: bet.status === "WON" ? "#00C48C" : "#F7F9FC",
+              fontFamily: "var(--font-mono)",
+            }}
           >
-            +${bet.payout.toFixed(2)}
+            {bet.status === "WON" ? "+" : ""}${payout.toFixed(2)}
           </span>
         </div>
       )}
 
-      {/* Bottom row — LOST donation */}
-      {bet.status === "LOST" && bet.donated !== undefined && (
+      {/* LOST — charity donation */}
+      {bet.status === "LOST" && charity !== null && charity > 0 && (
         <div
           className="flex items-center gap-2 rounded-lg px-3 py-2"
           style={{ backgroundColor: "rgba(0,196,140,0.08)" }}
         >
           <span style={{ color: "#00C48C" }}>♥</span>
           <span className="text-xs" style={{ color: "#00C48C" }}>
-            ${bet.donated.toFixed(2)} donated to {bet.charity}
+            ${charity.toFixed(2)} donated to your cause
           </span>
         </div>
       )}
@@ -179,34 +165,57 @@ function BetCard({ bet }: { bet: Bet }) {
   );
 }
 
-const TABS = [
-  { key: "open",     label: "Open"     },
-  { key: "settled",  label: "Settled"  },
-  { key: "void",     label: "Void"     },
-] as const;
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "open",    label: "Open"    },
+  { key: "settled", label: "Settled" },
+  { key: "void",    label: "Void"    },
+];
 
-type TabKey = (typeof TABS)[number]["key"];
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyBetsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("open");
+  const [bets, setBets] = useState<ApiBet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // Cache counts so badges stay visible after each tab is visited
+  const countCache = useRef<Partial<Record<TabKey, number>>>({});
+  const [, forceRender] = useState(0);
+
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1500);
-    return () => clearTimeout(t);
-  }, []);
-  const bets = BETS[activeTab];
+    let cancelled = false;
+
+    async function load() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchTab(activeTab);
+        if (cancelled) return;
+        setBets(data);
+        countCache.current[activeTab] = data.length;
+        forceRender((n) => n + 1);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load bets");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen px-6 py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
-        {/* Title */}
         <h1 className="text-[28px] font-bold text-white leading-tight">My Bets</h1>
 
         {/* Tabs */}
         <div className="flex border-b" style={{ borderColor: "#2A3350" }}>
           {TABS.map(({ key, label }) => {
             const active = activeTab === key;
+            const count = countCache.current[key];
             return (
               <button
                 key={key}
@@ -218,32 +227,53 @@ export default function MyBetsPage() {
                 }}
               >
                 {label}
-                <span
-                  className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: active ? "#0052FF" : "#1C2438",
-                    color: active ? "#ffffff" : "#8895B3",
-                  }}
-                >
-                  {BETS[key].length}
-                </span>
+                {count !== undefined && (
+                  <span
+                    className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: active ? "#0052FF" : "#1C2438",
+                      color: active ? "#ffffff" : "#8895B3",
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Bet cards */}
+        {/* Content */}
         <div className="flex flex-col gap-3 pb-6">
-          {isLoading
-            ? [0, 1, 2].map((i) => <BetCardSkeleton key={i} />)
-            : bets.length === 0
-              ? (
-                <p className="text-center py-12 text-sm" style={{ color: "#8895B3" }}>
-                  No bets here yet.
-                </p>
-              )
-              : bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
-          }
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 size={28} className="animate-spin" style={{ color: "#0052FF" }} />
+            </div>
+          ) : error ? (
+            <div
+              className="rounded-xl px-5 py-6 text-center border"
+              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
+            >
+              <p className="text-sm font-medium mb-1" style={{ color: "#FF3B5C" }}>
+                Failed to load bets
+              </p>
+              <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
+            </div>
+          ) : bets.length === 0 ? (
+            <div
+              className="rounded-xl px-5 py-10 text-center border"
+              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
+            >
+              <p className="text-sm font-medium text-white mb-1">No bets here yet.</p>
+              <p className="text-xs" style={{ color: "#8895B3" }}>
+                {activeTab === "open"
+                  ? "Place a bet from the Markets page to get started."
+                  : "Settled bets will appear here once they're graded."}
+              </p>
+            </div>
+          ) : (
+            bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
+          )}
         </div>
 
       </div>

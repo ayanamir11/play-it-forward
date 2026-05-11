@@ -2,19 +2,33 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const router = useRouter();
+  const login = useAuthStore((s) => s.login);
+
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isLoading) return;
+    setError(null);
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1500);
+    try {
+      await login(username, password);
+      router.replace("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -42,17 +56,27 @@ export default function LoginPage() {
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-            {/* Email */}
+            {/* Error banner */}
+            {error && (
+              <div
+                className="rounded-lg px-4 py-3 text-sm font-medium"
+                style={{ backgroundColor: "rgba(255,59,92,0.12)", color: "#FF3B5C" }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Username */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: "#8895B3" }}>
-                Email
+                Username
               </label>
               <input
-                type="email"
-                placeholder="you@email.com"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="yourhandle"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none border transition-colors focus:border-[#0052FF]"
                 style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
               />
@@ -127,7 +151,6 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-3 rounded-lg py-3 text-sm font-semibold text-white border transition-colors hover:bg-[#1C2438]"
             style={{ borderColor: "#2A3350" }}
           >
-            {/* Google G placeholder */}
             <span
               className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0"
               style={{

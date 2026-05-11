@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Building2, Check, CheckCircle2, Info, Loader2, Lock, Mail } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,7 +21,7 @@ interface WithdrawMethod {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const AVAILABLE = 225.0;
+// Available balance is read from authStore in WithdrawPage and passed as a prop
 
 const WITHDRAW_METHODS: WithdrawMethod[] = [
   {
@@ -103,10 +105,12 @@ function StepIndicator({ current }: { current: Step }) {
 
 function Step1({
   selected,
+  available,
   onSelect,
   onNext,
 }: {
   selected: string | null;
+  available: number;
   onSelect: (key: string) => void;
   onNext: () => void;
 }) {
@@ -123,7 +127,7 @@ function Step1({
           style={{ backgroundColor: "#131929", borderColor: "#2A3350", color: "#F7F9FC" }}>
           Available Balance:{" "}
           <span className="font-bold" style={{ fontFamily: "var(--font-mono)" }}>
-            ${AVAILABLE.toFixed(2)}
+            ${available.toFixed(2)}
           </span>
         </span>
       </div>
@@ -186,12 +190,14 @@ function Step1({
 
 function Step2({
   amount,
+  available,
   onAmountChange,
   selectedMethod,
   onBack,
   onNext,
 }: {
   amount: string;
+  available: number;
   onAmountChange: (v: string) => void;
   selectedMethod: string | null;
   onBack: () => void;
@@ -200,7 +206,7 @@ function Step2({
   const inputRef = useRef<HTMLInputElement>(null);
   const method = WITHDRAW_METHODS.find((m) => m.key === selectedMethod);
   const parsed = parseFloat(amount) || 0;
-  const overLimit = parsed > AVAILABLE;
+  const overLimit = parsed > available;
   const display = amount
     ? parsed.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
     : "0";
@@ -220,14 +226,14 @@ function Step2({
       <div>
         <h2 className="text-2xl font-bold text-white mb-1">How much?</h2>
         <div className="flex items-center justify-between">
-          <p className="text-sm" style={{ color: "#8895B3" }}>Min $10 · Max ${AVAILABLE.toFixed(2)}</p>
+          <p className="text-sm" style={{ color: "#8895B3" }}>Min $10 · Max ${available.toFixed(2)}</p>
           <button
             type="button"
-            onClick={() => onAmountChange(String(AVAILABLE))}
+            onClick={() => onAmountChange(String(available))}
             className="text-xs font-semibold"
             style={{ color: "#0052FF" }}
           >
-            Max: ${AVAILABLE.toFixed(2)}
+            Max: ${available.toFixed(2)}
           </button>
         </div>
       </div>
@@ -248,7 +254,7 @@ function Step2({
           ref={inputRef}
           type="number"
           min={10}
-          max={AVAILABLE}
+          max={available}
           value={amount}
           onChange={(e) => onAmountChange(e.target.value)}
           className="absolute opacity-0 w-0 h-0"
@@ -264,7 +270,7 @@ function Step2({
         >
           <AlertTriangle size={16} style={{ color: "#F57C00", flexShrink: 0, marginTop: 1 }} />
           <p className="text-sm" style={{ color: "#F57C00" }}>
-            Insufficient funds. Your available balance is ${AVAILABLE.toFixed(2)}.
+            Insufficient funds. Your available balance is ${available.toFixed(2)}.
           </p>
         </div>
       )}
@@ -325,6 +331,8 @@ function Step3({
   const [showSsn, setShowSsn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fetchUser = useAuthStore((s) => s.fetchUser);
 
   const method = WITHDRAW_METHODS.find((m) => m.key === selectedMethod);
   const parsed = parseFloat(amount) || 0;
@@ -333,15 +341,26 @@ function Step3({
 
   const arrivalMap: Record<string, string> = {
     ach: "May 1–3, 2026",
-    paypal: "Apr 27, 2026",
-    check: "May 1–5, 2026",
+    paypal: "May 3, 2026",
+    check: "May 6–8, 2026",
   };
   const arrival = selectedMethod ? arrivalMap[selectedMethod] : "—";
 
-  function handleWithdraw() {
+  async function handleWithdraw() {
     if (loading) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 1500);
+    setError(null);
+    try {
+      const res = await api.post("/api/payments/withdraw", { amount: parsed });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Withdrawal failed");
+      fetchUser();
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (success) {
@@ -430,6 +449,15 @@ function Step3({
         )}
       </div>
 
+      {error && (
+        <div
+          className="rounded-lg px-4 py-3 text-sm font-medium"
+          style={{ backgroundColor: "rgba(255,59,92,0.12)", color: "#FF3B5C" }}
+        >
+          {error}
+        </div>
+      )}
+
       <p className="text-xs text-center" style={{ color: "#8895B3" }}>
         By confirming you agree to our withdrawal terms
       </p>
@@ -463,9 +491,12 @@ function Step3({
 
 export default function WithdrawPage() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const [step, setStep] = useState<Step>(1);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+
+  const available = user ? parseFloat(user.balance) : 0;
 
   function next() { setStep((s) => Math.min(s + 1, 3) as Step); }
   function back() { setStep((s) => Math.max(s - 1, 1) as Step); }
@@ -491,6 +522,7 @@ export default function WithdrawPage() {
           {step === 1 && (
             <Step1
               selected={selectedMethod}
+              available={available}
               onSelect={setSelectedMethod}
               onNext={next}
             />
@@ -498,6 +530,7 @@ export default function WithdrawPage() {
           {step === 2 && (
             <Step2
               amount={amount}
+              available={available}
               onAmountChange={setAmount}
               selectedMethod={selectedMethod}
               onBack={back}

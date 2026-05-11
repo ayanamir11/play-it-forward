@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Check, CreditCard, Loader2, Smartphone } from "lucide-react";
+import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -280,62 +281,27 @@ function Step3({
   onBack: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   const method = PAYMENT_METHODS.find((m) => m.key === selectedMethod);
   const parsed = parseFloat(amount) || 0;
   const formatted = `$${parsed.toFixed(2)}`;
-  const newBalance = (250 + parsed).toFixed(2);
 
-  function handleDeposit() {
+  async function handleDeposit() {
     if (loading) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 1500);
-  }
-
-  if (success) {
-    return (
-      <div className="flex flex-col items-center gap-6 text-center py-4">
-        <div className="relative">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center animate-pulse"
-            style={{ backgroundColor: "rgba(0,196,140,0.15)" }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "#00C48C" }}>
-              <Check size={28} color="#ffffff" strokeWidth={3} />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <p className="text-2xl font-bold text-white mb-2">Deposit Successful!</p>
-          <p className="text-sm" style={{ color: "#8895B3" }}>
-            {formatted} has been added to your account
-          </p>
-        </div>
-
-        <p className="text-4xl font-bold text-white" style={{ fontFamily: "var(--font-mono)" }}>
-          ${newBalance}
-        </p>
-        <p className="text-xs" style={{ color: "#8895B3" }}>New balance</p>
-
-        <div className="flex flex-col gap-3 w-full pt-2">
-          <button
-            type="button"
-            onClick={() => { setSuccess(false); setLoading(false); router.push("/wallet/deposit"); }}
-            className="w-full rounded-lg py-3 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
-            style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
-          >
-            Make Another Deposit
-          </button>
-          <Link href="/wallet"
-            className="w-full text-center rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#0052FF" }}>
-            Back to Wallet
-          </Link>
-        </div>
-      </div>
-    );
+    setError(null);
+    try {
+      const res = await api.post("/api/payments/deposit", { amount: parsed });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to initiate deposit");
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setLoading(false);
+    }
   }
 
   return (
@@ -366,16 +332,16 @@ function Step3({
           <span className="text-sm font-semibold" style={{ color: "#00C48C" }}>Instantly</span>
         </div>
 
-        <div className="h-px" style={{ backgroundColor: "#2A3350" }} />
-
-        {/* New balance */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm" style={{ color: "#8895B3" }}>New balance</span>
-          <span className="text-base font-bold text-white" style={{ fontFamily: "var(--font-mono)" }}>
-            ${newBalance}
-          </span>
-        </div>
       </div>
+
+      {error && (
+        <div
+          className="rounded-lg px-4 py-3 text-sm font-medium"
+          style={{ backgroundColor: "rgba(255,59,92,0.12)", color: "#FF3B5C" }}
+        >
+          {error}
+        </div>
+      )}
 
       <p className="text-xs text-center" style={{ color: "#8895B3" }}>
         By confirming you agree to our deposit terms
