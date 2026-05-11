@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, createToken } from '@/lib/auth'
+import { authLimiter, checkRateLimit } from '@/lib/ratelimit'
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') ?? 'anonymous'
+    const { success } = await checkRateLimit(authLimiter, ip)
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Too many attempts, please try again later' },
+        { status: 429 },
+      )
+    }
+
     let body: { username?: string; password?: string }
     try {
       body = JSON.parse(await request.text())
