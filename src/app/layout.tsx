@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ToastProvider } from "@/components/ToastProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background font-sans antialiased">
         <AuthProvider>{children}</AuthProvider>
+        <ToastProvider />
       </body>
     </html>
   );

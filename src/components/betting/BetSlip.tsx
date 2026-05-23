@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, ReceiptText, X } from "lucide-react";
 import { useBetSlipStore } from "@/store/betSlipStore";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
+import toast from "react-hot-toast";
 
 const QUICK_PICKS = [10, 25, 50, 100];
 
@@ -55,8 +56,11 @@ function ConfirmModal({ onCancel, onDone }: ModalProps) {
       setBetId(`PIF-${data.bet.id.slice(-6).toUpperCase()}`);
       fetchUser();
       setConfirmed(true);
+      toast.success("Bet placed successfully!");
     } catch (err) {
-      setBetError(err instanceof Error ? err.message : "Failed to place bet");
+      const msg = err instanceof Error ? err.message : "Failed to place bet";
+      setBetError(msg);
+      toast.error(msg);
     } finally {
       setIsPlacing(false);
     }

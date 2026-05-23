@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -185,10 +186,12 @@ export default function AccountPage() {
     if (res.ok) {
       setAccount((prev) => prev ? { ...prev, selectedCause: cause } : prev);
       await setUser();
+      setShowCauseModal(false);
+      toast.success("Cause updated successfully!");
     } else {
+      toast.error("Failed to update cause.");
       throw new Error(data.error ?? "Failed to update cause");
     }
-    setShowCauseModal(false);
   }
 
   const displayName = account

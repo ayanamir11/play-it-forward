@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -24,8 +25,10 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
       setSent(true);
+      toast.success("Reset link sent! Check your email.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, Check, CreditCard, Loader2, Smartphone } from "lucide-react";
 import { api } from "@/lib/api";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -296,10 +297,13 @@ function Step3({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to initiate deposit");
       if (data.url) {
+        toast.success("Redirecting to payment...");
         window.location.href = data.url;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg);
+      toast.error("Deposit failed. Please try again.");
       setLoading(false);
     }
   }

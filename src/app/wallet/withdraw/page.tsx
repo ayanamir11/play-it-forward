@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Building2, Check, CheckCircle2, Info, Loader2, Lock, Mail } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -356,8 +357,11 @@ function Step3({
       if (!res.ok) throw new Error(data.error ?? "Withdrawal failed");
       fetchUser();
       setSuccess(true);
+      toast.success("Withdrawal successful!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
