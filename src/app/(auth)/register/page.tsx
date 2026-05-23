@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { api } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -204,12 +205,47 @@ function Step1({ onNext }: { onNext: (data: Step1Data) => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm]   = useState("");
   const [phone, setPhone]       = useState("");
-  const [showPwd, setShowPwd]           = useState(false);
-  const [showConfirm, setShowConfirm]   = useState(false);
+  const [showPwd, setShowPwd]         = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isChecking, setIsChecking]   = useState(false);
+  const [emailError, setEmailError]   = useState<string | null>(null);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
-  function handleNext() {
-    if (!email || !username || !password || password !== confirm) return;
-    onNext({ email, username, password });
+  const formIncomplete = !email || !username || !password || password !== confirm;
+
+  async function handleNext() {
+    if (formIncomplete || isChecking) return;
+
+    setIsChecking(true);
+    setEmailError(null);
+    setUsernameError(null);
+
+    try {
+      const res = await api.post("/api/auth/check-availability", { email, username });
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Rate-limited or server error — surface a generic error on email
+        setEmailError(data.error ?? "Could not verify availability. Try again.");
+        return;
+      }
+
+      const { emailTaken, usernameTaken } = data as {
+        emailTaken: boolean;
+        usernameTaken: boolean;
+      };
+
+      if (emailTaken)    setEmailError("That email is already registered");
+      if (usernameTaken) setUsernameError("That username is already taken");
+
+      if (!emailTaken && !usernameTaken) {
+        onNext({ email, username, password });
+      }
+    } catch {
+      setEmailError("Network error. Check your connection and try again.");
+    } finally {
+      setIsChecking(false);
+    }
   }
 
   return (
@@ -225,10 +261,13 @@ function Step1({ onNext }: { onNext: (data: Step1Data) => void }) {
             type="email"
             placeholder="you@email.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
             className={inputCls()}
-            style={inputStyle()}
+            style={{ ...inputStyle(), ...(emailError ? { borderColor: "#FF3B5C" } : {}) }}
           />
+          {emailError && (
+            <p className="text-xs" style={{ color: "#FF3B5C" }}>{emailError}</p>
+          )}
         </Field>
 
         <Field label="Username">
@@ -237,10 +276,13 @@ function Step1({ onNext }: { onNext: (data: Step1Data) => void }) {
             placeholder="yourhandle"
             autoComplete="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => { setUsername(e.target.value); setUsernameError(null); }}
             className={inputCls()}
-            style={inputStyle()}
+            style={{ ...inputStyle(), ...(usernameError ? { borderColor: "#FF3B5C" } : {}) }}
           />
+          {usernameError && (
+            <p className="text-xs" style={{ color: "#FF3B5C" }}>{usernameError}</p>
+          )}
         </Field>
 
         <Field label="Password">
@@ -298,15 +340,16 @@ function Step1({ onNext }: { onNext: (data: Step1Data) => void }) {
       <button
         type="button"
         onClick={handleNext}
-        disabled={!email || !username || !password || password !== confirm}
-        className="w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity"
+        disabled={formIncomplete || isChecking}
+        className="w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-opacity"
         style={{
           backgroundColor: "#0052FF",
-          opacity: (!email || !username || !password || password !== confirm) ? 0.5 : 1,
-          cursor: (!email || !username || !password || password !== confirm) ? "not-allowed" : "pointer",
+          opacity: (formIncomplete || isChecking) ? 0.5 : 1,
+          cursor: (formIncomplete || isChecking) ? "not-allowed" : "pointer",
         }}
       >
-        Continue →
+        {isChecking && <Loader2 size={15} className="animate-spin" />}
+        {isChecking ? "Checking…" : "Continue →"}
       </button>
     </div>
   );
