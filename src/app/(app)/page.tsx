@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 import CharityPotWidget from "@/components/home/CharityPotWidget";
 import MarketCardRow from "@/components/home/MarketCardRow";
 import { CharityWidgetSkeleton, MarketCardSkeleton } from "@/components/ui/Skeletons";
+import { useAuthStore } from "@/store/authStore";
 
 const FEATURED_GAMES = [
   {
@@ -53,7 +54,15 @@ const FEATURED_GAMES = [
   },
 ];
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function Home() {
+  const user = useAuthStore((s) => s.user);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const t = setTimeout(() => setIsLoading(false), 1500);
@@ -67,7 +76,7 @@ export default function Home() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">
-            Good evening, Ayana 👋
+            {getGreeting()}, {user?.username ?? "there"} 👋
           </h1>
           <button
             aria-label="Notifications"

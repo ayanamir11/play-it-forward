@@ -61,17 +61,24 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Wallet balance */}
+      {/* User info + Wallet balance */}
       <div
-        className="mx-3 mb-4 rounded-lg px-4 py-3"
+        className="mx-3 mb-4 rounded-lg px-4 py-3 flex flex-col gap-2"
         style={{ backgroundColor: "#1C2438" }}
       >
-        <p className="text-xs font-medium" style={{ color: "#8895B3" }}>
-          Balance
-        </p>
-        <p className="text-base font-bold text-white mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
-          ${balance.toFixed(2)}
-        </p>
+        {user && (
+          <p className="text-xs font-semibold truncate" style={{ color: "#8895B3" }}>
+            @{user.username}
+          </p>
+        )}
+        <div>
+          <p className="text-xs font-medium" style={{ color: "#8895B3" }}>
+            Balance
+          </p>
+          <p className="text-base font-bold text-white mt-0.5" style={{ fontFamily: "var(--font-mono)" }}>
+            ${balance.toFixed(2)}
+          </p>
+        </div>
       </div>
     </aside>
   );
