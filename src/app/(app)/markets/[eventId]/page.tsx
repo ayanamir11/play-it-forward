@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { BetSelection, useBetSlipStore } from "@/store/betSlipStore";
+import { EventDetailSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,11 +151,7 @@ export default function EventDetailPage() {
   }, [eventId, sport]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin" style={{ color: "#0052FF" }} />
-      </div>
-    );
+    return <EventDetailSkeleton />;
   }
 
   if (error || !event) {

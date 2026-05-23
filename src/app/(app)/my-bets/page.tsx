@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { BetCardSkeleton } from "@/components/ui/Skeletons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,9 +246,7 @@ export default function MyBetsPage() {
         {/* Content */}
         <div className="flex flex-col gap-3 pb-6">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 size={28} className="animate-spin" style={{ color: "#0052FF" }} />
-            </div>
+            [0, 1, 2, 3].map((i) => <BetCardSkeleton key={i} />)
           ) : error ? (
             <div
               className="rounded-xl px-5 py-6 text-center border"

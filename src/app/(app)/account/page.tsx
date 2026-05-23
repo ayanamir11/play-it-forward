@@ -21,6 +21,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
+import { AccountProfileSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -227,25 +228,29 @@ export default function AccountPage() {
 
           {/* ── 1. Profile card ── */}
           <Card className="p-6">
-            <div className="flex items-start gap-4">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 text-xl font-bold"
-                style={{ backgroundColor: "rgba(0,82,255,0.2)", color: "#0052FF" }}
-              >
-                {isLoading ? <Loader2 size={20} className="animate-spin" style={{ color: "#0052FF" }} /> : initials}
-              </div>
+            {isLoading ? (
+              <AccountProfileSkeleton />
+            ) : (
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 text-xl font-bold"
+                  style={{ backgroundColor: "rgba(0,82,255,0.2)", color: "#0052FF" }}
+                >
+                  {initials}
+                </div>
 
-              <div className="flex flex-col gap-1 min-w-0">
-                <span className="text-lg font-bold text-white">{displayName}</span>
-                <span className="text-sm" style={{ color: "#8895B3" }}>{email}</span>
-                <span className="text-xs" style={{ color: "#8895B3" }}>@{username}</span>
-                {memberSince && (
-                  <span className="text-xs mt-0.5" style={{ color: "#8895B3" }}>
-                    Member since {memberSince}
-                  </span>
-                )}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-lg font-bold text-white">{displayName}</span>
+                  <span className="text-sm" style={{ color: "#8895B3" }}>{email}</span>
+                  <span className="text-xs" style={{ color: "#8895B3" }}>@{username}</span>
+                  {memberSince && (
+                    <span className="text-xs mt-0.5" style={{ color: "#8895B3" }}>
+                      Member since {memberSince}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </Card>
 
           {/* ── 2. Active Cause card ── */}

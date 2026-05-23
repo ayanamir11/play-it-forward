@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, HandHeart, Heart, Leaf, Loader2, Scale } from "lucide-react";
+import { BookOpen, HandHeart, Heart, Leaf, Scale } from "lucide-react";
 import { api } from "@/lib/api";
+import { CharityPageSkeleton } from "@/components/ui/Skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,11 +89,7 @@ export default function CharityPage() {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin" style={{ color: "#0052FF" }} />
-      </div>
-    );
+    return <CharityPageSkeleton />;
   }
 
   const totalDonated = summary?.totalDonated ?? 0;
