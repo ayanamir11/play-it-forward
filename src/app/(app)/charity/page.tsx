@@ -239,7 +239,8 @@ export default function CharityPage() {
         <div className="flex flex-col gap-3">
           <SectionHeading>Donation History</SectionHeading>
 
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#2A3350" }}>
+          {/* overflow-x-auto keeps the 4-col table from breaking at 375px */}
+          <div className="rounded-xl border overflow-hidden overflow-x-auto" style={{ borderColor: "#2A3350" }}>
             {history.length === 0 ? (
               <div className="py-10 text-center">
                 <p className="text-sm" style={{ color: "#8895B3" }}>
@@ -247,7 +248,7 @@ export default function CharityPage() {
                 </p>
               </div>
             ) : (
-              <>
+              <div className="min-w-[480px]">
                 <div
                   className="grid grid-cols-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
                   style={{ backgroundColor: "#1C2438", color: "#8895B3" }}
@@ -290,7 +291,7 @@ export default function CharityPage() {
                     </div>
                   </div>
                 ))}
-              </>
+              </div>
             )}
           </div>
         </div>

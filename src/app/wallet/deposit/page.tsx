@@ -216,8 +216,8 @@ function Step2({
         className="flex items-center justify-center gap-2 py-4 cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
-        <span className="text-5xl font-bold text-white">$</span>
-        <span className="text-[64px] font-bold text-white leading-none" style={{ fontFamily: "var(--font-mono)" }}>
+        <span className="text-4xl sm:text-5xl font-bold text-white">$</span>
+        <span className="text-[48px] sm:text-[64px] font-bold text-white leading-none" style={{ fontFamily: "var(--font-mono)" }}>
           {display}
         </span>
         {/* Hidden real input */}

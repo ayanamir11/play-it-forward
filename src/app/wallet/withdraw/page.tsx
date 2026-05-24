@@ -244,9 +244,9 @@ function Step2({
         className="flex items-center justify-center gap-2 py-4 cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
-        <span className="text-5xl font-bold" style={{ color: overLimit ? "#FF3B5C" : "#F7F9FC" }}>$</span>
+        <span className="text-4xl sm:text-5xl font-bold" style={{ color: overLimit ? "#FF3B5C" : "#F7F9FC" }}>$</span>
         <span
-          className="text-[64px] font-bold leading-none"
+          className="text-[48px] sm:text-[64px] font-bold leading-none"
           style={{ fontFamily: "var(--font-mono)", color: overLimit ? "#FF3B5C" : "#F7F9FC" }}
         >
           {display}
@@ -506,7 +506,7 @@ export default function WithdrawPage() {
   function back() { setStep((s) => Math.max(s - 1, 1) as Step); }
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[480px] flex flex-col">
 
         <button

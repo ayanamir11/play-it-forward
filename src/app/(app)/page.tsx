@@ -70,17 +70,17 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-white min-w-0 truncate">
             {getGreeting()}, {user?.username ?? "there"} 👋
           </h1>
           <button
             aria-label="Notifications"
-            className="p-2 rounded-lg transition-colors hover:bg-[#1C2438]"
+            className="flex-shrink-0 p-2 rounded-lg transition-colors hover:bg-[#1C2438]"
           >
             <Bell size={22} style={{ color: "#8895B3" }} />
           </button>

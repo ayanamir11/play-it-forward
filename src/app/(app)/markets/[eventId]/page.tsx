@@ -91,7 +91,7 @@ function OddsButton({ title, subtitle, odds, selected, onClick }: OddsButtonProp
   return (
     <button
       onClick={onClick}
-      className="flex-1 rounded-xl p-4 border flex flex-col items-center gap-1.5 transition-colors"
+      className="flex-1 rounded-xl p-4 border flex flex-col items-center gap-1.5 transition-colors min-h-[72px]"
       style={{
         backgroundColor: selected ? "#0A1628" : "#131929",
         borderColor: selected ? "#0052FF" : "#2A3350",
@@ -283,7 +283,7 @@ export default function EventDetailPage() {
           </div>
 
           {/* Odds buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
 
             {activeTab === "moneyline" && (
               <>

@@ -206,13 +206,13 @@ export default function MyBetsPage() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen px-6 py-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
         <h1 className="text-[28px] font-bold text-white leading-tight">My Bets</h1>
 
-        {/* Tabs */}
-        <div className="flex border-b" style={{ borderColor: "#2A3350" }}>
+        {/* Tabs — overflow-x-auto in case many tabs on narrow screens */}
+        <div className="flex border-b overflow-x-auto scrollbar-none" style={{ borderColor: "#2A3350" }}>
           {TABS.map(({ key, label }) => {
             const active = activeTab === key;
             const count = countCache.current[key];
