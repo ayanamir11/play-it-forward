@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Receipt, Trophy, X } from "lucide-react";
+import { ArrowLeft, Loader2, Receipt, Trophy, Wallet, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,16 +219,13 @@ export default function WalletPage() {
                 <Loader2 size={22} className="animate-spin" style={{ color: "#0052FF" }} />
               </div>
             ) : bets.length === 0 ? (
-              <div className="py-10 text-center">
-                <p className="text-sm" style={{ color: "#8895B3" }}>No bets placed yet.</p>
-                <Link
-                  href="/markets"
-                  className="inline-block mt-3 text-xs font-semibold"
-                  style={{ color: "#0052FF" }}
-                >
-                  Browse Markets →
-                </Link>
-              </div>
+              <EmptyState
+                icon={Wallet}
+                title="No transactions yet"
+                description="Deposit funds to get started"
+                actionLabel="Deposit"
+                actionHref="/wallet/deposit"
+              />
             ) : (
               bets.slice(0, 10).map((bet, i) => (
                 <BetRow key={bet.id} bet={bet} index={i} />

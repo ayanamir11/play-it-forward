@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Receipt } from "lucide-react";
 import { api } from "@/lib/api";
 import { BetCardSkeleton } from "@/components/ui/Skeletons";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -258,17 +260,25 @@ export default function MyBetsPage() {
               <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
             </div>
           ) : bets.length === 0 ? (
-            <div
-              className="rounded-xl px-5 py-10 text-center border"
-              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-            >
-              <p className="text-sm font-medium text-white mb-1">No bets here yet.</p>
-              <p className="text-xs" style={{ color: "#8895B3" }}>
-                {activeTab === "open"
-                  ? "Place a bet from the Markets page to get started."
-                  : "Settled bets will appear here once they're graded."}
-              </p>
-            </div>
+            <EmptyState
+              icon={Receipt}
+              title={
+                activeTab === "open"
+                  ? "No bets yet"
+                  : activeTab === "settled"
+                  ? "No settled bets yet"
+                  : "No void bets"
+              }
+              description={
+                activeTab === "open"
+                  ? "Head to Markets to place your first bet"
+                  : activeTab === "settled"
+                  ? "Settled bets will appear here once they're graded"
+                  : "Voided bets will appear here if any are cancelled"
+              }
+              actionLabel={activeTab === "open" ? "Browse Markets" : undefined}
+              actionHref={activeTab === "open" ? "/markets" : undefined}
+            />
           ) : (
             bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
           )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, HandHeart, Heart, Leaf, Scale } from "lucide-react";
 import { api } from "@/lib/api";
 import { CharityPageSkeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -242,11 +243,13 @@ export default function CharityPage() {
           {/* overflow-x-auto keeps the 4-col table from breaking at 375px */}
           <div className="rounded-xl border overflow-hidden overflow-x-auto" style={{ borderColor: "#2A3350" }}>
             {history.length === 0 ? (
-              <div className="py-10 text-center">
-                <p className="text-sm" style={{ color: "#8895B3" }}>
-                  No donations yet. Place bets to start contributing.
-                </p>
-              </div>
+              <EmptyState
+                icon={Heart}
+                title="No donations yet"
+                description="Place a bet and your losses will automatically contribute to your chosen cause"
+                actionLabel="Start Betting"
+                actionHref="/markets"
+              />
             ) : (
               <div className="min-w-[480px]">
                 <div

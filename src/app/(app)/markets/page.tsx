@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search } from "lucide-react";
+import { BarChart2, Search } from "lucide-react";
 import MarketCardRow from "@/components/home/MarketCardRow";
 import { MarketCardSkeleton } from "@/components/ui/Skeletons";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,25 +244,21 @@ export default function MarketsPage() {
           {isLoading ? (
             [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
           ) : error ? (
-            <div
-              className="rounded-xl px-5 py-6 text-center border"
-              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-            >
-              <p className="text-sm font-medium mb-1" style={{ color: "#FF3B5C" }}>
-                Failed to load events
-              </p>
-              <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
-            </div>
+            <EmptyState
+              icon={BarChart2}
+              title="No games available"
+              description={error}
+            />
           ) : filtered.length === 0 ? (
-            <div
-              className="rounded-xl px-5 py-10 text-center border"
-              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-            >
-              <p className="text-sm font-medium text-white mb-1">No events available</p>
-              <p className="text-xs" style={{ color: "#8895B3" }}>
-                Check back later or try a different sport.
-              </p>
-            </div>
+            <EmptyState
+              icon={BarChart2}
+              title="No games available"
+              description={
+                search.trim()
+                  ? `No events matched "${search}" — try a different search`
+                  : "Check back later for upcoming events"
+              }
+            />
           ) : Object.entries(grouped).map(([league, leagueGames]) => (
             <div key={league} className="flex flex-col gap-3">
               {Object.keys(grouped).length > 1 && <LeagueHeader league={league} />}
