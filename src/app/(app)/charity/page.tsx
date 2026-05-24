@@ -5,6 +5,7 @@ import { BookOpen, HandHeart, Heart, Leaf, Scale } from "lucide-react";
 import { api } from "@/lib/api";
 import { CharityPageSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ export default function CharityPage() {
   const history = summary?.history ?? [];
 
   return (
+    <PageTransition>
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-8 pb-6">
 
@@ -301,5 +303,6 @@ export default function CharityPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

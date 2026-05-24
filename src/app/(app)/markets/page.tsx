@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BarChart2, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import MarketCardRow from "@/components/home/MarketCardRow";
 import { MarketCardSkeleton } from "@/components/ui/Skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -184,95 +186,110 @@ export default function MarketsPage() {
     return acc;
   }, {});
 
+  // Pre-compute a global index for each game so we can stagger them
+  const gameOrder: Record<string, number> = {};
+  let orderIdx = 0;
+  for (const leagueGames of Object.values(grouped)) {
+    for (const g of leagueGames) {
+      gameOrder[g.eventId] = orderIdx++;
+    }
+  }
+
   return (
-    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto max-w-[800px] flex flex-col gap-5">
+    <PageTransition>
+      <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
-        <h1 className="text-[28px] font-bold text-white leading-tight">Markets</h1>
+          <h1 className="text-[28px] font-bold text-white leading-tight">Markets</h1>
 
-        {/* Search */}
-        <div
-          className="flex items-center gap-3 w-full rounded-xl px-4 py-3 border"
-          style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-        >
-          <Search size={18} style={{ color: "#8895B3", flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search teams, leagues..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none"
-            style={{ color: "#F7F9FC" }}
-          />
-        </div>
-
-        {/* Sport tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {TABS.map((tab) => {
-            const active = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className="flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium border transition-colors"
-                style={{
-                  backgroundColor: active ? "#0052FF" : "#131929",
-                  color: active ? "#ffffff" : "#8895B3",
-                  borderColor: active ? "#0052FF" : "#2A3350",
-                }}
-              >
-                {tab}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Heading */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-white">
-            {activeTab === "All" ? "All Games" : `${activeTab} Games`}
-          </h2>
-          {!isLoading && (
-            <span className="text-sm" style={{ color: "#8895B3" }}>
-              {filtered.length} {filtered.length === 1 ? "game" : "games"}
-            </span>
-          )}
-        </div>
-
-        {/* Game list */}
-        <div className="flex flex-col gap-3 pb-6">
-          {isLoading ? (
-            [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
-          ) : error ? (
-            <EmptyState
-              icon={BarChart2}
-              title="No games available"
-              description={error}
+          {/* Search */}
+          <div
+            className="flex items-center gap-3 w-full rounded-xl px-4 py-3 border"
+            style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
+          >
+            <Search size={18} style={{ color: "#8895B3", flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Search teams, leagues..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 bg-transparent text-sm outline-none"
+              style={{ color: "#F7F9FC" }}
             />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={BarChart2}
-              title="No games available"
-              description={
-                search.trim()
-                  ? `No events matched "${search}" — try a different search`
-                  : "Check back later for upcoming events"
-              }
-            />
-          ) : Object.entries(grouped).map(([league, leagueGames]) => (
-            <div key={league} className="flex flex-col gap-3">
-              {Object.keys(grouped).length > 1 && <LeagueHeader league={league} />}
-              {leagueGames.map((game) => (
-                <MarketCardRow
-                  key={game.eventId}
-                  {...game}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+          </div>
 
+          {/* Sport tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {TABS.map((tab) => {
+              const active = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className="flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium border transition-colors"
+                  style={{
+                    backgroundColor: active ? "#0052FF" : "#131929",
+                    color: active ? "#ffffff" : "#8895B3",
+                    borderColor: active ? "#0052FF" : "#2A3350",
+                  }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Heading */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-white">
+              {activeTab === "All" ? "All Games" : `${activeTab} Games`}
+            </h2>
+            {!isLoading && (
+              <span className="text-sm" style={{ color: "#8895B3" }}>
+                {filtered.length} {filtered.length === 1 ? "game" : "games"}
+              </span>
+            )}
+          </div>
+
+          {/* Game list */}
+          <div className="flex flex-col gap-3 pb-6">
+            {isLoading ? (
+              [0, 1, 2, 3, 4, 5].map((i) => <MarketCardSkeleton key={i} />)
+            ) : error ? (
+              <EmptyState
+                icon={BarChart2}
+                title="No games available"
+                description={error}
+              />
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                icon={BarChart2}
+                title="No games available"
+                description={
+                  search.trim()
+                    ? `No events matched "${search}" — try a different search`
+                    : "Check back later for upcoming events"
+                }
+              />
+            ) : Object.entries(grouped).map(([league, leagueGames]) => (
+              <div key={league} className="flex flex-col gap-3">
+                {Object.keys(grouped).length > 1 && <LeagueHeader league={league} />}
+                {leagueGames.map((game) => (
+                  <motion.div
+                    key={game.eventId}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: (gameOrder[game.eventId] ?? 0) * 0.05 }}
+                  >
+                    <MarketCardRow {...game} />
+                  </motion.div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

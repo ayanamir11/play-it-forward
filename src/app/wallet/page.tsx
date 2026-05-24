@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Receipt, Trophy, Wallet, X } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,6 +150,7 @@ export default function WalletPage() {
   const balance = user ? parseFloat(user.balance) : 0;
 
   return (
+    <PageTransition>
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
 
@@ -187,20 +190,24 @@ export default function WalletPage() {
           </div>
 
           <div className="flex gap-3">
-            <Link
-              href="/wallet/deposit"
-              className="flex-1 text-center rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#0052FF" }}
-            >
-              Deposit
-            </Link>
-            <Link
-              href="/wallet/withdraw"
-              className="flex-1 text-center rounded-lg py-3 text-sm font-semibold text-white border transition-colors hover:bg-[#1C2438]"
-              style={{ borderColor: "#2A3350" }}
-            >
-              Withdraw
-            </Link>
+            <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/wallet/deposit"
+                className="block text-center rounded-lg py-3 text-sm font-bold text-white"
+                style={{ backgroundColor: "#0052FF" }}
+              >
+                Deposit
+              </Link>
+            </motion.div>
+            <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/wallet/withdraw"
+                className="block text-center rounded-lg py-3 text-sm font-semibold text-white border transition-colors hover:bg-[#1C2438]"
+                style={{ borderColor: "#2A3350" }}
+              >
+                Withdraw
+              </Link>
+            </motion.div>
           </div>
         </div>
 
@@ -227,14 +234,21 @@ export default function WalletPage() {
                 actionHref="/wallet/deposit"
               />
             ) : (
-              bets.slice(0, 10).map((bet, i) => (
-                <BetRow key={bet.id} bet={bet} index={i} />
-              ))
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {bets.slice(0, 10).map((bet, i) => (
+                  <BetRow key={bet.id} bet={bet} index={i} />
+                ))}
+              </motion.div>
             )}
           </div>
         </div>
 
       </div>
     </div>
+    </PageTransition>
   );
 }

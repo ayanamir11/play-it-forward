@@ -18,10 +18,12 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import { AccountProfileSkeleton } from "@/components/ui/Skeleton";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,6 +225,7 @@ export default function AccountPage() {
 
   return (
     <>
+      <PageTransition>
       <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
         <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
 
@@ -231,7 +234,12 @@ export default function AccountPage() {
             {isLoading ? (
               <AccountProfileSkeleton />
             ) : (
-              <div className="flex items-start gap-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-start gap-4"
+              >
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 text-xl font-bold"
                   style={{ backgroundColor: "rgba(0,82,255,0.2)", color: "#0052FF" }}
@@ -249,7 +257,7 @@ export default function AccountPage() {
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
           </Card>
 
@@ -308,20 +316,24 @@ export default function AccountPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/wallet/deposit"
-                  className="flex-1 text-center rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#0052FF" }}
-                >
-                  Deposit
-                </Link>
-                <Link
-                  href="/wallet/withdraw"
-                  className="flex-1 text-center rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
-                  style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
-                >
-                  Withdraw
-                </Link>
+                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Link
+                    href="/wallet/deposit"
+                    className="block text-center rounded-lg py-2.5 text-sm font-semibold text-white"
+                    style={{ backgroundColor: "#0052FF" }}
+                  >
+                    Deposit
+                  </Link>
+                </motion.div>
+                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Link
+                    href="/wallet/withdraw"
+                    className="block text-center rounded-lg py-2.5 text-sm font-semibold border transition-colors hover:bg-[#1C2438]"
+                    style={{ borderColor: "#2A3350", color: "#F7F9FC" }}
+                  >
+                    Withdraw
+                  </Link>
+                </motion.div>
               </div>
 
               <Link
@@ -369,6 +381,7 @@ export default function AccountPage() {
 
         </div>
       </div>
+      </PageTransition>
 
       {showCauseModal && (
         <ChangeCauseModal

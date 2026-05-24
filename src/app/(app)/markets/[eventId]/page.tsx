@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { BetSelection, useBetSlipStore } from "@/store/betSlipStore";
 import { EventDetailSkeleton } from "@/components/ui/Skeleton";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +91,9 @@ interface OddsButtonProps {
 
 function OddsButton({ title, subtitle, odds, selected, onClick }: OddsButtonProps) {
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
       onClick={onClick}
       className="flex-1 rounded-xl p-4 border flex flex-col items-center gap-1.5 transition-colors min-h-[72px]"
       style={{
@@ -109,7 +113,7 @@ function OddsButton({ title, subtitle, odds, selected, onClick }: OddsButtonProp
       >
         {odds}
       </span>
-    </button>
+    </motion.button>
   );
 }
 
@@ -225,6 +229,7 @@ export default function EventDetailPage() {
   const shortAway = event.away_team.split(" ").at(-1)!;
 
   return (
+    <PageTransition>
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[800px] flex flex-col gap-6 pb-8">
 
@@ -377,5 +382,6 @@ export default function EventDetailPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

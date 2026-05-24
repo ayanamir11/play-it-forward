@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Receipt } from "lucide-react";
+import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { BetCardSkeleton } from "@/components/ui/Skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageTransition } from "@/components/ui/PageTransition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -208,83 +210,94 @@ export default function MyBetsPage() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto max-w-[800px] flex flex-col gap-5">
+    <PageTransition>
+      <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-[800px] flex flex-col gap-5">
 
-        <h1 className="text-[28px] font-bold text-white leading-tight">My Bets</h1>
+          <h1 className="text-[28px] font-bold text-white leading-tight">My Bets</h1>
 
-        {/* Tabs — overflow-x-auto in case many tabs on narrow screens */}
-        <div className="flex border-b overflow-x-auto scrollbar-none" style={{ borderColor: "#2A3350" }}>
-          {TABS.map(({ key, label }) => {
-            const active = activeTab === key;
-            const count = countCache.current[key];
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className="px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors"
-                style={{
-                  color: active ? "#ffffff" : "#8895B3",
-                  borderColor: active ? "#0052FF" : "transparent",
-                }}
+          {/* Tabs — overflow-x-auto in case many tabs on narrow screens */}
+          <div className="flex border-b overflow-x-auto scrollbar-none" style={{ borderColor: "#2A3350" }}>
+            {TABS.map(({ key, label }) => {
+              const active = activeTab === key;
+              const count = countCache.current[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className="px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors"
+                  style={{
+                    color: active ? "#ffffff" : "#8895B3",
+                    borderColor: active ? "#0052FF" : "transparent",
+                  }}
+                >
+                  {label}
+                  {count !== undefined && (
+                    <span
+                      className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: active ? "#0052FF" : "#1C2438",
+                        color: active ? "#ffffff" : "#8895B3",
+                      }}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content */}
+          <div className="flex flex-col gap-3 pb-6">
+            {isLoading ? (
+              [0, 1, 2, 3].map((i) => <BetCardSkeleton key={i} />)
+            ) : error ? (
+              <div
+                className="rounded-xl px-5 py-6 text-center border"
+                style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
               >
-                {label}
-                {count !== undefined && (
-                  <span
-                    className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: active ? "#0052FF" : "#1C2438",
-                      color: active ? "#ffffff" : "#8895B3",
-                    }}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                <p className="text-sm font-medium mb-1" style={{ color: "#FF3B5C" }}>
+                  Failed to load bets
+                </p>
+                <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
+              </div>
+            ) : bets.length === 0 ? (
+              <EmptyState
+                icon={Receipt}
+                title={
+                  activeTab === "open"
+                    ? "No bets yet"
+                    : activeTab === "settled"
+                    ? "No settled bets yet"
+                    : "No void bets"
+                }
+                description={
+                  activeTab === "open"
+                    ? "Head to Markets to place your first bet"
+                    : activeTab === "settled"
+                    ? "Settled bets will appear here once they're graded"
+                    : "Voided bets will appear here if any are cancelled"
+                }
+                actionLabel={activeTab === "open" ? "Browse Markets" : undefined}
+                actionHref={activeTab === "open" ? "/markets" : undefined}
+              />
+            ) : (
+              bets.map((bet, i) => (
+                <motion.div
+                  key={bet.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.05 }}
+                >
+                  <BetCard bet={bet} />
+                </motion.div>
+              ))
+            )}
+          </div>
 
-        {/* Content */}
-        <div className="flex flex-col gap-3 pb-6">
-          {isLoading ? (
-            [0, 1, 2, 3].map((i) => <BetCardSkeleton key={i} />)
-          ) : error ? (
-            <div
-              className="rounded-xl px-5 py-6 text-center border"
-              style={{ backgroundColor: "#131929", borderColor: "#2A3350" }}
-            >
-              <p className="text-sm font-medium mb-1" style={{ color: "#FF3B5C" }}>
-                Failed to load bets
-              </p>
-              <p className="text-xs" style={{ color: "#8895B3" }}>{error}</p>
-            </div>
-          ) : bets.length === 0 ? (
-            <EmptyState
-              icon={Receipt}
-              title={
-                activeTab === "open"
-                  ? "No bets yet"
-                  : activeTab === "settled"
-                  ? "No settled bets yet"
-                  : "No void bets"
-              }
-              description={
-                activeTab === "open"
-                  ? "Head to Markets to place your first bet"
-                  : activeTab === "settled"
-                  ? "Settled bets will appear here once they're graded"
-                  : "Voided bets will appear here if any are cancelled"
-              }
-              actionLabel={activeTab === "open" ? "Browse Markets" : undefined}
-              actionHref={activeTab === "open" ? "/markets" : undefined}
-            />
-          ) : (
-            bets.map((bet) => <BetCard key={bet.id} bet={bet} />)
-          )}
         </div>
-
       </div>
-    </div>
+    </PageTransition>
   );
 }
